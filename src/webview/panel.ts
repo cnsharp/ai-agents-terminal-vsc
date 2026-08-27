@@ -224,7 +224,7 @@ window.addEventListener("message", (ev: MessageEvent) => {
           `→ launched ${msg.command} in the VS Code Terminal — focus it to interact.`
         );
         term?.writeln(
-          "(This machine can't give the extension its own PTY, so the agent runs in a real VS Code terminal.)"
+          "(node-pty couldn't spawn a PTY here, so the agent runs in a real VS Code terminal instead.)"
         );
       } else {
         term?.reset();
