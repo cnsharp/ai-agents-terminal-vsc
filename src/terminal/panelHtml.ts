@@ -33,9 +33,6 @@ export function renderPanelHtml(
     body.vscode-high-contrast .yolo-toggle.active .ic-on { display: none; }
     body.vscode-dark .yolo-toggle.active .ic-on-dark,
     body.vscode-high-contrast .yolo-toggle.active .ic-on-dark { display: inline-block; }
-    #bar .mode-toggle { display: inline-flex; align-items: center; justify-content: center; min-width: 28px; height: 24px; padding: 0 6px; cursor: pointer; background: transparent; border: 1px solid transparent; border-radius: 3px; color: var(--vscode-foreground); font-size: 13px; line-height: 1; }
-    #bar .mode-toggle:hover { background: var(--vscode-button-secondaryHoverBackground); }
-    #bar .mode-toggle.active { background: var(--vscode-button-background); color: var(--vscode-button-foreground); border-color: var(--vscode-button-border, var(--vscode-panel-border)); }
     #bar button:hover { background: var(--vscode-button-secondaryHoverBackground); }
     #status { position: absolute; left: 0; right: 0; bottom: 0; padding: 3px 8px; font-size: 11px; opacity: 0.8; background: var(--vscode-sideBar-background); border-top: 1px solid var(--vscode-panel-border); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     #status.err { color: var(--vscode-errorForeground, #f48771); }
@@ -73,7 +70,7 @@ export function renderPanelHtml(
       <div id="agentMenu" class="agent-menu" hidden></div>
     </div>
     <button id="skipToggle" class="yolo-toggle" type="button" aria-pressed="false" title="Skip permissions (YOLO)"></button>
-    <button id="resumeToggle" class="mode-toggle" type="button" aria-pressed="false" title="Resume last session">↺</button>
+    <button id="resumeToggle" class="yolo-toggle" type="button" aria-pressed="false" title="Resume last session"></button>
     <button id="launch">Launch</button>
   </div>
   <div id="terminal"></div>

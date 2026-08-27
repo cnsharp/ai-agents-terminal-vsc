@@ -125,6 +125,25 @@ export class YoloViewProvider implements vscode.WebviewViewProvider {
     };
   }
 
+  /** Webview URIs for the Resume toggle, also taken from the IDEA edition (resume.svg / resumeOn.svg
+   *  and their *_dark variants). Returns undefined until the view is ready. */
+  private resumeIconUris():
+    | { off: string; offDark: string; on: string; onDark: string }
+    | undefined {
+    const wv = this.view?.webview;
+    if (!wv) {
+      return undefined;
+    }
+    const u = (rel: string) =>
+      wv.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "media", "icons", rel)).toString();
+    return {
+      off: u("resume.svg"),
+      offDark: u("resume_dark.svg"),
+      on: u("resumeOn.svg"),
+      onDark: u("resumeOn_dark.svg"),
+    };
+  }
+
   private html(): string {
     const scriptUri = webviewAssetUri(this.view!.webview, this.extensionUri, "panel.js");
     const styleUri = webviewAssetUri(this.view!.webview, this.extensionUri, "panel.css");
@@ -142,6 +161,7 @@ export class YoloViewProvider implements vscode.WebviewViewProvider {
       resumeMode: settings.getResumeMode(),
       lastAgentId: settings.getLastAgentId(),
       skipIcons: this.skipIconUris(),
+      resumeIcons: this.resumeIconUris(),
       cwd: defaultCwd(),
     });
   }

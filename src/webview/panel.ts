@@ -48,6 +48,7 @@ interface InitMessage {
   skipEnabled: boolean;
   resumeMode?: boolean;
   skipIcons?: SkipIconSet;
+  resumeIcons?: SkipIconSet;
   cwd: string;
 }
 
@@ -88,8 +89,9 @@ let selectedAgentId = "";
 let skipEnabled = false;
 let skipIcons: SkipIconSet | undefined;
 
-// --- Resume toggle state (continue the most recent session for the agent) ---
+// --- Resume toggle state + icon set (icons come from the host / IDEA edition) ---
 let resumeEnabled = false;
+let resumeIcons: SkipIconSet | undefined;
 
 // Which backend is currently hosting the running agent. When "vscode-terminal", the agent runs in a
 // real VS Code terminal (revealed) and the embedded xterm only shows a notice — keystrokes/ output are
@@ -124,7 +126,7 @@ function renderSkipToggle(): void {
     <img class="ic ic-on-dark" src="${escapeAttr(skipIcons.onDark)}" alt="" />`;
 }
 
-// Resume toggle: a simple highlighted state (no icon set needed).
+// Resume toggle: render with the four icon variants (off/on × light/dark), selected via CSS.
 function renderResumeToggle(): void {
   const btn = document.getElementById("resumeToggle") as HTMLButtonElement | null;
   if (!btn) {
@@ -132,6 +134,13 @@ function renderResumeToggle(): void {
   }
   btn.classList.toggle("active", resumeEnabled);
   btn.setAttribute("aria-pressed", resumeEnabled ? "true" : "false");
+  if (resumeIcons) {
+    btn.innerHTML = `
+      <img class="ic ic-off" src="${escapeAttr(resumeIcons.off)}" alt="" />
+      <img class="ic ic-off-dark" src="${escapeAttr(resumeIcons.offDark)}" alt="" />
+      <img class="ic ic-on" src="${escapeAttr(resumeIcons.on)}" alt="" />
+      <img class="ic ic-on-dark" src="${escapeAttr(resumeIcons.onDark)}" alt="" />`;
+  }
 }
 
 function renderAgentMenu(): void {
@@ -194,6 +203,7 @@ window.addEventListener("message", (ev: MessageEvent) => {
       skipEnabled = Boolean(msg.skipEnabled);
       resumeEnabled = Boolean(msg.resumeMode);
       skipIcons = msg.skipIcons;
+      resumeIcons = msg.resumeIcons;
       renderSkipToggle();
       renderResumeToggle();
       const installed = agents.filter((a) => a.resolvedPath).length;
