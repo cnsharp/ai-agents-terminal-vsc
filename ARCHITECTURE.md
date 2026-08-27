@@ -88,9 +88,10 @@ matches a `file` pattern links as `type` (higher priority). The same de-dup runs
 
 ### 5.5 Settings UI — DONE
 The IntelliJ `Configurable` is replaced by `contributes.configuration` (settings.json) **plus** a
-**Settings webview** (`src/settings/settingsView.ts`) showing a per-agent table: skip flag and base args
-per agent, plus the global "skip by default" toggle. Saving writes `permissionRules`, `agentBaseArgs`,
-and `skipEnabled`.
+**Settings webview** (`src/settings/settingsView.ts`) showing a per-agent table: skip flag, base args,
+and resume flag per agent, plus the global "skip by default" toggle. Saving writes `permissionRules`,
+`agentBaseArgs`, `agentResumeFlags`, and `skipEnabled`. `agentResumeFlags` overrides the catalog's
+`resumeFlag` at launch (keyed by lower-cased agent id, mirroring `agentBaseArgs`).
 
 ## 6. File layout
 

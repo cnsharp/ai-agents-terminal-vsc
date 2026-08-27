@@ -35,7 +35,7 @@ npm test           # unit tests for the link engine
 - Embedded interactive PTY (`node-pty` + bundled `xterm.js`) launched in a login shell.
 - Clickable terminal links with de-duplication/priority: `path:line:col`, quoted paths, stack-trace
   frames, bare file names, Python tracebacks, type names (`com.foo.Bar`), `Class.member` refs, URLs.
-- A **Settings** view to edit per-agent skip flags / base args and the global skip default.
+- A **Settings** view to edit per-agent skip flags / base args / resume flags and the global skip default.
 
 ## Layout
 
