@@ -51,3 +51,10 @@ Re-sync whenever `main`'s `agents.json` or `src/agents.ts` (`AgentDef`/`AgentCon
   **excluded** from the host `tsc` build (they are bundled separately by esbuild with the DOM lib).
 - `node-pty` is a native dependency used by the yolo panel's PTY; it must be installed/natively built
   in the environment or the host `tsc` will report it as unresolved.
+
+## Demo: `static` branch (NOT a product)
+`static` is a demo-only branch, not one of the two products above. It declares the agent profiles
+(`claude`, `codex`) **statically in `package.json`** under `contributes.terminal.profiles`, so VS Code
+surfaces them in the built-in Terminal — there is **no status bar**, **no runtime `agents.json` loading**,
+and **no dynamic `TerminalProfileProvider`**. The config lives entirely in the VS Code manifest.
+Do not apply the `agents.json` sync convention or the two-product rules to it.
