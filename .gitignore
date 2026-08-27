@@ -2,8 +2,9 @@ node_modules/
 out/
 *.vsix
 .vscode-test/
+.vscode/
 *.log
 .DS_Store
 
-# user workspace settings
-.vscode/
+# generated webview bundle (build output)
+media/dist/

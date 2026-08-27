@@ -1,48 +1,53 @@
+// Central agent catalog. Ported from ai-agents-vsc: the built-in list lives in `agents.json` (data,
+// not code) so it can be maintained — or copied verbatim — without touching source. The code carries
+// NO agent data; everything (names, commands, base args, YOLO/skip flags, icons) comes from
+// `agents.json` and the user's `yolo.agents` setting.
+//
+// Final agent list = built-ins from agents.json, merged with the user's `yolo.agents` setting:
+//   - an entry whose `command` (or `id`) matches a built-in overrides that built-in — only the fields
+//     you set replace the built-in's; `enabled:false` hides it;
+//   - an entry whose `command` isn't a built-in is added as a custom agent.
+// `command`, `displayName`, and `id` must each stay unique.
+
 import * as fs from "fs";
 import * as vscode from "vscode";
+import * as settings from "../settings/settings";
 
 export interface AgentDef {
-  readonly id: string;
+  id: string;
   /** Binary launched in the terminal (also used for PATH detection). */
-  readonly command: string;
-  readonly displayName: string;
-  readonly baseArgs: string[];
-  /** Args appended when "YOLO mode" (auto-approve) is enabled in settings. */
-  readonly yoloArgs?: string[];
-  /** Flag appended when "Resume mode" is on, to continue the most recent session. */
-  readonly resumeFlag?: string;
-  /** Icon filename under media/agents. Optional — falls back to a default terminal icon. */
-  readonly iconFile?: string;
+  command: string;
+  displayName: string;
+  baseArgs: string[];
+  /** Args appended when "YOLO mode" (auto-approve) is enabled. */
+  yoloArgs?: string[];
+  /** Flag appended when "Resume mode" is on, to continue the most recent session (e.g. "--resume"). */
+  resumeFlag?: string;
+  /** Icon filename under media/agents. Optional — falls back to the default terminal icon. */
+  iconFile?: string;
 }
 
-/**
- * Shape of an entry in `agents.json` (the built-in catalog) and in the
- * `aiAgentsTerminal.agents` setting (user overrides / additions). Only
- * `command` is required; everything else overrides the built-in agent with the
- * same `command`, or defines a brand-new custom agent.
- */
+/** Shape of an entry in `agents.json` and in the `yolo.agents` setting (user overrides / additions). */
 export interface AgentConfig {
+  id?: string;
   command: string;
   displayName?: string;
   baseArgs?: string[];
   yoloArgs?: string[];
-  iconFile?: string;
-  /** Flag appended when "Resume mode" is on (e.g. `-r`, `--resume`). */
+  /** Flag appended when "Resume mode" is on (e.g. "-r", "--resume"). */
   resumeFlag?: string;
+  iconFile?: string;
   /** Set false to hide a built-in agent without deleting it. Defaults to true. */
   enabled?: boolean;
-  id?: string;
 }
 
-// Built-in catalog, loaded once from agents.json at activate() time. This is the
-// single source of truth for built-ins — the code carries no agent data.
+// Built-in catalog, loaded once from agents.json at activate() time. Single source of truth.
 let builtInAgents: AgentConfig[] = [];
 
 /**
- * Load the built-in agent catalog from `agents.json` (program/data separation:
- * the catalog lives in data, not in code). Must be called once from activate()
- * with the extension context. On failure the built-in list is empty and a
- * console error is emitted — the extension still works with user configuration.
+ * Load the built-in agent catalog from `agents.json` (program/data separation). Must be called once
+ * from activate() with the extension context. On failure the built-in list is empty and a console
+ * error is emitted — the extension still works with user configuration.
  */
 export function initBuiltInAgents(ctx: vscode.ExtensionContext): void {
   try {
@@ -54,37 +59,14 @@ export function initBuiltInAgents(ctx: vscode.ExtensionContext): void {
     }
     builtInAgents = parsed as AgentConfig[];
   } catch (e) {
-    console.error("[ai-agents-terminal] failed to load agents.json:", e);
+    console.error("[yolo] failed to load agents.json:", e);
     builtInAgents = [];
   }
 }
 
+/** Resolve the final, merged agent list (built-ins + user `yolo.agents` setting). */
 export function resolveAgents(): AgentDef[] {
-  return buildAgents().agents;
-}
-
-/** Human-readable warnings about the merged config (e.g. duplicate command /
- *  name / id). Empty when the config is clean. */
-export function getAgentConfigWarnings(): string[] {
-  return buildAgents().warnings;
-}
-
-/**
- * Final agent list = built-ins from agents.json, merged with the user's
- * `aiAgentsTerminal.agents` setting. The setting is a list of overrides /
- * additions:
- *   - an entry whose `command` (or `id`) matches a built-in overrides that
- *     built-in — only the fields you set replace the built-in's; `enabled:false`
- *     hides it;
- *   - an entry whose `command` isn't a built-in is added as a custom agent.
- * `command`, `displayName`, and `id` must each stay unique.
- */
-function buildAgents(): { agents: AgentDef[]; warnings: string[] } {
-  const overrides =
-    vscode.workspace
-      .getConfiguration("aiAgentsTerminal")
-      .get<AgentConfig[]>("agents") ?? [];
-
+  const overrides = normalizeCustomTools(settings.getCustomTools());
   const warnings: string[] = [];
   const agents: AgentDef[] = [];
   const seen = { command: new Set<string>(), name: new Set<string>(), id: new Set<string>() };
@@ -152,5 +134,24 @@ function buildAgents(): { agents: AgentDef[]; warnings: string[] } {
     pushAgent(ov);
   }
 
-  return { agents, warnings };
+  if (warnings.length > 0) {
+    console.warn("[yolo] agent config warnings:\n - " + warnings.join("\n - "));
+  }
+  return agents;
+}
+
+/**
+ * Normalise the `yolo.agents` setting (which uses the legacy CustomTool shape: `baseArgs` as a single
+ * string, `iconPath` instead of `iconFile`) into the shared AgentConfig shape so the merge below can
+ * treat built-ins and custom tools identically.
+ */
+function normalizeCustomTools(custom: settings.CustomTool[]): AgentConfig[] {
+  return custom.map((c) => ({
+    id: c.id,
+    command: c.command,
+    displayName: c.displayName,
+    baseArgs: typeof c.baseArgs === "string" ? c.baseArgs.trim().split(/\s+/).filter(Boolean) : [],
+    iconFile: c.iconPath || undefined,
+    enabled: c.enabled,
+  }));
 }

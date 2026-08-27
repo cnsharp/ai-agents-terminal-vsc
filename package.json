@@ -1,122 +1,125 @@
 {
-  "name": "ai-agents-terminal",
-  "displayName": "AI Agents Terminal",
-  "description": "Launch installed AI CLI agents from a status-bar launcher (opens in a terminal)",
+  "name": "yolo-vsc",
+  "displayName": "YOLO — AI Agents Extender",
+  "description": "Launch AI CLI agents (Claude Code, Codex, CodeBuddy, Goose, …) in an embedded terminal with clickable file/type links.",
   "version": "0.1.0",
-  "publisher": "cnsharpstudio",
+  "publisher": "cnsharp",
   "engines": {
     "vscode": "^1.85.0"
   },
   "categories": [
-    "Other"
+    "Other",
+    "Terminal"
   ],
   "activationEvents": [
-    "onStartupFinished"
+    "onView:yolo.panel",
+    "onView:yolo.settings",
+    "onCommand:yolo.openPanel"
   ],
   "main": "./out/extension.js",
   "contributes": {
-    "keybindings": [
+    "commands": [
       {
-        "command": "ai-agents-terminal.toggleYoloMode",
-        "key": "ctrl+alt+y",
-        "mac": "cmd+alt+y"
+        "command": "yolo.openPanel",
+        "title": "YOLO: Open Agents Panel",
+        "category": "YOLO",
+        "icon": "$(y)"
       },
       {
-        "command": "ai-agents-terminal.toggleResumeMode",
-        "key": "ctrl+alt+r",
-        "mac": "cmd+alt+r"
+        "command": "yolo.openSettings",
+        "title": "YOLO: Open Settings",
+        "category": "YOLO",
+        "icon": "$(gear)"
       }
     ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "yolo",
+          "title": "YOLO",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "yolo": [
+        {
+          "type": "webview",
+          "id": "yolo.panel",
+          "name": "AI Agents"
+        },
+        {
+          "type": "webview",
+          "id": "yolo.settings",
+          "name": "Settings"
+        }
+      ]
+    },
     "configuration": {
-      "title": "AI Agents Terminal",
+      "title": "YOLO",
       "properties": {
-        "aiAgentsTerminal.yoloMode": {
-          "type": "boolean",
-          "default": false,
-          "description": "YOLO mode: launch agents with auto-approve flags so they run without permission prompts."
-        },
-        "aiAgentsTerminal.resumeMode": {
-          "type": "boolean",
-          "default": false,
-          "description": "Resume mode: launch agents with their resume flag (from agents.json) to continue the most recent session."
-        },
-        "aiAgentsTerminal.agents": {
+        "yolo.agents": {
           "type": "array",
-          "description": "User overrides / additions merged on top of the built-in catalog in agents.json. Override a built-in by matching its `command` (only the fields you set replace it); set `enabled: false` to hide a built-in; use a `command` not in agents.json to add a custom agent. Reload the window after editing.",
-          "items": {
-            "type": "object",
-            "required": ["command"],
-            "additionalProperties": false,
-            "properties": {
-              "command": {
-                "type": "string",
-                "description": "CLI binary launched in the terminal (also used for PATH detection). Required."
-              },
-              "displayName": {
-                "type": "string",
-                "description": "Name shown in the launcher. Defaults to `command` for custom agents."
-              },
-              "baseArgs": {
-                "type": "array",
-                "items": { "type": "string" },
-                "description": "Arguments passed before the agent's subcommand."
-              },
-              "yoloArgs": {
-                "type": "array",
-                "items": { "type": "string" },
-                "description": "Extra args appended when YOLO (auto-approve) mode is on."
-              },
-              "iconFile": {
-                "type": "string",
-                "description": "Icon filename under the extension's media/agents folder (e.g. claude.png). If omitted, a default terminal icon is used."
-              },
-              "enabled": {
-                "type": "boolean",
-                "default": true,
-                "description": "Set to false to hide an agent without deleting its entry."
-              },
-              "id": {
-                "type": "string",
-                "description": "Optional stable id (defaults to `command`)."
-              }
-            }
-          }
+          "default": [],
+          "description": "User agents merged with the built-in catalog (agents.json). Each entry: {id?, displayName?, command, baseArgs?, yoloArgs?, iconFile?, enabled?}. An entry whose command/id matches a built-in overrides it; enabled:false hides a built-in; a new command adds a custom agent."
         },
-        "aiAgentsTerminal.installedAgents": {
+        "yolo.permissionRules": {
+          "type": "array",
+          "default": [],
+          "description": "Per-agent skip-permission flag. Each: {agentId, flag}."
+        },
+        "yolo.skipEnabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Inject the skip-permission flag when launching an agent."
+        },
+        "yolo.resumeMode": {
+          "type": "boolean",
+          "default": false,
+          "description": "Append the agent's resume flag (e.g. --resume) to continue the most recent session."
+        },
+        "yolo.agentBaseArgs": {
+          "type": "object",
+          "default": {},
+          "description": "Extra launch args per promoted agent id (lower-cased)."
+        },
+        "yolo.installedCommands": {
+          "type": "array",
+          "default": [],
+          "description": "Cache of commands detected as installed on this machine."
+        },
+        "yolo.shell": {
+          "type": "string",
+          "default": "",
+          "description": "Override the shell used to launch agents and probe PATH. Absolute path or a binary name on PATH. On Windows, leaving this empty auto-detects a POSIX shell (Git Bash / WSL) when needed; otherwise cmd.exe is used."
+        },
+        "yolo.shellArgs": {
           "type": "array",
           "items": { "type": "string" },
           "default": [],
-          "hidden": true,
-          "description": "Internal cache of AI agent commands detected on PATH. Maintained automatically — do not edit by hand. (internal)"
+          "description": "Extra arguments passed to the shell before the agent command (e.g. [\"-l\"]). Ignored on Windows cmd.exe."
         }
       }
-    },
-    "commands": [
-      {
-        "command": "ai-agents-terminal.openMenu",
-        "title": "AI Agents",
-        "icon": "$(sparkle)"
-      },
-      {
-        "command": "ai-agents-terminal.toggleYoloMode",
-        "title": "AI Agents: Toggle YOLO Mode",
-        "icon": "$(zap)"
-      },
-      {
-        "command": "ai-agents-terminal.toggleResumeMode",
-        "title": "AI Agents: Toggle Resume Mode",
-        "icon": "$(history)"
-      }
-    ]
+    }
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
+    "vscode:prepublish": "npm run build",
+    "build": "npm run compile && npm run build:webview",
     "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./"
+    "watch": "tsc -watch -p ./",
+    "build:webview": "esbuild src/webview/panel.ts src/webview/settings.ts --bundle --outdir=media/dist --loader:.css=css --sourcemap",
+    "watch:webview": "npm run build:webview -- --watch",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "node-pty": "^1.0.0",
+    "xterm": "^5.3.0",
+    "xterm-addon-fit": "^0.8.0"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
+    "@types/node": "^20.0.0",
     "@types/vscode": "^1.85.0",
+    "esbuild": "^0.21.0",
     "typescript": "^5.4.0"
   }
 }

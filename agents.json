@@ -5,7 +5,7 @@
     "command": "claude",
     "baseArgs": [],
     "yoloArgs": ["--dangerously-skip-permissions"],
-    "resumeFlag": "-r",
+    "resumeFlag": "--resume",
     "iconFile": "claude.png"
   },
   {
@@ -22,7 +22,6 @@
     "displayName": "Cline",
     "command": "cline",
     "baseArgs": ["--auto-approve", "true"],
-    "resumeFlag": "--taskId",
     "iconFile": "cline.png"
   },
   {
@@ -31,7 +30,6 @@
     "command": "codebuddy",
     "baseArgs": [],
     "yoloArgs": ["--permission-mode", "bypassPermissions"],
-    "resumeFlag": "-r",
     "iconFile": "codebuddy.png"
   },
   {
@@ -48,7 +46,6 @@
     "command": "copilot",
     "baseArgs": [],
     "yoloArgs": ["--allow-all-tools", "--allow-all-paths"],
-    "resumeFlag": "-r",
     "iconFile": "copilot.png"
   },
   {
@@ -56,7 +53,6 @@
     "displayName": "Cursor",
     "command": "cursor-agent",
     "baseArgs": ["agent"],
-    "resumeFlag": "--resume",
     "iconFile": "cursor.png"
   },
   {
@@ -72,7 +68,6 @@
     "displayName": "Goose",
     "command": "goose",
     "baseArgs": [],
-    "resumeFlag": "-r",
     "iconFile": "goose.png"
   },
   {
@@ -80,7 +75,6 @@
     "displayName": "Hermes",
     "command": "hermes",
     "baseArgs": [],
-    "resumeFlag": "-r",
     "iconFile": "hermes.png"
   },
   {
@@ -96,7 +90,6 @@
     "displayName": "Kimi",
     "command": "kimi",
     "baseArgs": [],
-    "resumeFlag": "-r",
     "iconFile": "kimi.png"
   },
   {
@@ -119,7 +112,6 @@
     "displayName": "Pi",
     "command": "pi",
     "baseArgs": [],
-    "resumeFlag": "-r",
     "iconFile": "pi.png"
   },
   {
@@ -134,7 +126,6 @@
     "displayName": "TraeCode",
     "command": "traecli",
     "baseArgs": [],
-    "resumeFlag": "--resume",
     "iconFile": "trae.png"
   },
   {
