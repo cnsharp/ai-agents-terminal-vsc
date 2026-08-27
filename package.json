@@ -147,6 +147,7 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run build",
+    "postinstall": "node scripts/ensure-node-pty-exec.cjs",
     "build": "npm run compile && npm run build:webview",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
