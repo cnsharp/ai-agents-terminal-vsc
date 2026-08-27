@@ -18,8 +18,8 @@ interface CustomToolRow {
   id: string;
   displayName: string;
   command: string;
-  baseArgs: string;
-  iconPath: string;
+  baseArgs: string[];
+  iconFile: string;
 }
 interface SettingsState {
   agents: AgentRow[];
@@ -66,7 +66,7 @@ function render(): void {
       return `<div class="ctool" data-id="${escapeAttr(t.id)}">
         <input data-ct="displayName" value="${escapeAttr(t.displayName)}" placeholder="Display name" />
         <input data-ct="command" value="${escapeAttr(t.command)}" placeholder="command (e.g. my-agent)" />
-        <input data-ct="iconPath" value="${escapeAttr(t.iconPath)}" placeholder="icon path (optional)" />
+        <input data-ct="iconFile" value="${escapeAttr(t.iconFile)}" placeholder="icon file (optional)" />
         <span class="delwrap">${badge} <button class="delbtn" data-del="${escapeAttr(t.id)}" title="Remove">✕</button></span>
       </div>`;
     })
@@ -115,7 +115,7 @@ function addTool(): void {
   const id = `custom.${slug("tool" + (state.customTools.length + 1))}`;
   state.customTools = [
     ...state.customTools,
-    { id, displayName: "", command: "", baseArgs: "", iconPath: "" },
+    { id, displayName: "", command: "", baseArgs: [], iconFile: "" },
   ];
   render();
 }
@@ -159,7 +159,7 @@ function save(): void {
         command: card?.querySelector<HTMLInputElement>("input[data-ct='command']")?.value?.trim() || t.command,
         // baseArgs are edited in the per-agent permission table (keyed by this tool's id).
         baseArgs: t.baseArgs,
-        iconPath: card?.querySelector<HTMLInputElement>("input[data-ct='iconPath']")?.value?.trim() || t.iconPath,
+        iconFile: card?.querySelector<HTMLInputElement>("input[data-ct='iconFile']")?.value?.trim() || t.iconFile,
       };
     })
     .filter((t) => t.command.length > 0);

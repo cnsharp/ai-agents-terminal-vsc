@@ -141,17 +141,19 @@ export function resolveAgents(): AgentDef[] {
 }
 
 /**
- * Normalise the `yolo.agents` setting (which uses the legacy CustomTool shape: `baseArgs` as a single
- * string, `iconPath` instead of `iconFile`) into the shared AgentConfig shape so the merge below can
- * treat built-ins and custom tools identically.
+ * The `yolo.agents` setting uses the same shape as the built-in `AgentConfig` (array `baseArgs`,
+ * `iconFile`, plus overridable `yoloArgs` / `resumeFlag`). This just normalises it to the shared
+ * `AgentConfig` type so the merge below treats built-ins and user overrides identically.
  */
-function normalizeCustomTools(custom: settings.CustomTool[]): AgentConfig[] {
+function normalizeCustomTools(custom: settings.UserAgentOverride[]): AgentConfig[] {
   return custom.map((c) => ({
     id: c.id,
     command: c.command,
     displayName: c.displayName,
-    baseArgs: typeof c.baseArgs === "string" ? c.baseArgs.trim().split(/\s+/).filter(Boolean) : [],
-    iconFile: c.iconPath || undefined,
+    baseArgs: c.baseArgs ?? [],
+    yoloArgs: c.yoloArgs,
+    resumeFlag: c.resumeFlag,
+    iconFile: c.iconFile,
     enabled: c.enabled,
   }));
 }

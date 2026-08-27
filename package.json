@@ -60,8 +60,55 @@
       "properties": {
         "yolo.agents": {
           "type": "array",
-          "default": [],
-          "description": "User agents merged with the built-in catalog (agents.json). Each entry: {id?, displayName?, command, baseArgs?, yoloArgs?, iconFile?, enabled?}. An entry whose command/id matches a built-in overrides it; enabled:false hides a built-in; a new command adds a custom agent."
+          "description": "User overrides / additions merged on top of the built-in catalog in agents.json. Override a built-in by matching its `command` (only the fields you set replace it, including `yoloArgs` and `resumeFlag`); set `enabled: false` to hide a built-in; use a `command` not in agents.json to add a custom agent. Reload the window after editing.",
+          "items": {
+            "type": "object",
+            "required": [
+              "command"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "command": {
+                "type": "string",
+                "description": "CLI binary launched in the terminal (also used for PATH detection). Required."
+              },
+              "displayName": {
+                "type": "string",
+                "description": "Name shown in the panel. Defaults to `command` for custom agents."
+              },
+              "baseArgs": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Arguments passed before the agent's subcommand."
+              },
+              "yoloArgs": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Extra args appended when YOLO (skip-permissions) mode is on."
+              },
+              "resumeFlag": {
+                "type": "string",
+                "description": "Flag appended when Resume mode is on (e.g. `--resume`) to continue the most recent session."
+              },
+              "iconFile": {
+                "type": "string",
+                "description": "Icon filename under the extension's media/agents folder (e.g. claude.png). If omitted, a default terminal icon is used."
+              },
+              "enabled": {
+                "type": "boolean",
+                "default": true,
+                "description": "Set to false to hide an agent without deleting its entry."
+              },
+              "id": {
+                "type": "string",
+                "description": "Optional stable id (defaults to `command`)."
+              }
+            }
+          }
         },
         "yolo.permissionRules": {
           "type": "array",

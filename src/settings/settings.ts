@@ -8,13 +8,21 @@ export interface PermissionRule {
   flag: string;
 }
 
-export interface CustomTool {
-  id: string;
-  displayName: string;
+/**
+ * Shape of an entry in the `yolo.agents` setting — user overrides / additions merged on top of the
+ * built-in catalog in agents.json. It is intentionally identical to the built-in `AgentConfig` shape
+ * (see src/agents/catalog.ts) so a built-in entry can be copy-pasted into the override and vice-versa,
+ * and so users can override `yoloArgs` / `resumeFlag` per agent. `command` is required.
+ */
+export interface UserAgentOverride {
+  id?: string;
+  displayName?: string;
   command: string;
-  baseArgs: string;
-  iconPath: string;
-  /** Set false to hide this tool (or a matching built-in) from the panel. Defaults to true. */
+  baseArgs?: string[];
+  yoloArgs?: string[];
+  resumeFlag?: string;
+  iconFile?: string;
+  /** Set false to hide this agent (or a matching built-in) from the panel. Defaults to true. */
   enabled?: boolean;
 }
 
@@ -46,11 +54,11 @@ export function setPermissionRules(rules: PermissionRule[]): void {
   cfg().update("permissionRules", rules, vscode.ConfigurationTarget.Global);
 }
 
-export function getCustomTools(): CustomTool[] {
-  return cfg().get<CustomTool[]>("agents", []);
+export function getCustomTools(): UserAgentOverride[] {
+  return cfg().get<UserAgentOverride[]>("agents", []);
 }
 
-export function setCustomTools(tools: CustomTool[]): void {
+export function setCustomTools(tools: UserAgentOverride[]): void {
   cfg().update("agents", tools, vscode.ConfigurationTarget.Global);
 }
 
@@ -68,6 +76,18 @@ export function getInstalledCommands(): string[] {
 
 export function setInstalledCommands(commands: string[]): void {
   cfg().update("installedCommands", commands, vscode.ConfigurationTarget.Global);
+}
+
+/**
+ * Remembers the agent the user launched most recently, so the panel can
+ * pre-select it next time. Persisted globally (like the other yolo.* settings).
+ */
+export function getLastAgentId(): string {
+  return cfg().get<string>("lastAgentId", "");
+}
+
+export function setLastAgentId(id: string): void {
+  cfg().update("lastAgentId", id, vscode.ConfigurationTarget.Global);
 }
 
 /**
@@ -90,7 +110,7 @@ export function getShellArgs(): string[] {
  */
 export function syncInstalledAgents(
   promoted: { id: string; command: string }[],
-  custom: CustomTool[],
+  custom: UserAgentOverride[],
   canExecute: (cmd: string) => boolean
 ): void {
   const installed = new Set([

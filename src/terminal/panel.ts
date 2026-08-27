@@ -140,6 +140,7 @@ export class YoloViewProvider implements vscode.WebviewViewProvider {
       agents,
       skipEnabled: settings.getSkipEnabled(),
       resumeMode: settings.getResumeMode(),
+      lastAgentId: settings.getLastAgentId(),
       skipIcons: this.skipIconUris(),
       cwd: defaultCwd(),
     });
@@ -190,6 +191,9 @@ export class YoloViewProvider implements vscode.WebviewViewProvider {
       vscode.window.showErrorMessage(`YOLO: '${def.command}' is not installed / not on PATH.`);
       return;
     }
+
+    // Remember this agent so the panel pre-selects it next time.
+    settings.setLastAgentId(def.id);
 
     // Base args: the catalog's `baseArgs` first, then any per-agent override from settings.
     const args: string[] = [...(def.baseArgs ?? [])];

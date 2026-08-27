@@ -148,7 +148,7 @@ path + full command. Missing tools (`resolvedPath` undefined) are flagged with a
 ### F2 — Custom tools CRUD in the Settings UI (implemented)
 
 `src/webview/settings.ts` now renders a **Custom tools** section: add/edit/remove cards with
-`displayName` / `command` / `iconPath`, a per-row delete button, and an inline "✓ installed / ⚠ not
+`displayName` / `command` / `iconFile`, a per-row delete button, and an inline "✓ installed / ⚠ not
 found on PATH" badge. On every command edit the webview posts `{type:"validate", commands}`; the host
 (`settingsView.ts`) resolves each via `resolvePath()` and replies `{type:"validateResult", results}`,
 and the webview patches only the badges (input focus preserved). Save posts `customTools` (persisted via
