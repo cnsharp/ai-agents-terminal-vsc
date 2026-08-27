@@ -18,9 +18,10 @@ export interface AgentDef {
   /** Binary launched in the terminal (also used for PATH detection). */
   command: string;
   displayName: string;
-  baseArgs: string[];
-  /** Args appended when "YOLO mode" (auto-approve) is enabled. */
-  yoloArgs?: string[];
+  /** Base args prepended to every launch (space-separated string, split at runtime). */
+  baseArgs: string;
+  /** Flag appended when "YOLO mode" (auto-approve) is enabled. */
+  skipFlag?: string;
   /** Flag appended when "Resume mode" is on, to continue the most recent session (e.g. "--resume"). */
   resumeFlag?: string;
   /** Icon filename under media/agents. Optional — falls back to the default terminal icon. */
@@ -32,8 +33,8 @@ export interface AgentConfig {
   id?: string;
   command: string;
   displayName?: string;
-  baseArgs?: string[];
-  yoloArgs?: string[];
+  baseArgs?: string;
+  skipFlag?: string;
   /** Flag appended when "Resume mode" is on (e.g. "-r", "--resume"). */
   resumeFlag?: string;
   iconFile?: string;
@@ -100,8 +101,8 @@ export function resolveAgents(): AgentDef[] {
       id,
       command: cfg.command,
       displayName: name,
-      baseArgs: cfg.baseArgs ?? [],
-      yoloArgs: cfg.yoloArgs,
+      baseArgs: cfg.baseArgs ?? "",
+      skipFlag: cfg.skipFlag,
       resumeFlag: cfg.resumeFlag,
       iconFile: cfg.iconFile,
     });
@@ -141,17 +142,18 @@ export function resolveAgents(): AgentDef[] {
 }
 
 /**
- * The `yolo.agents` setting uses the same shape as the built-in `AgentConfig` (array `baseArgs`,
- * `iconFile`, plus overridable `yoloArgs` / `resumeFlag`). This just normalises it to the shared
- * `AgentConfig` type so the merge below treats built-ins and user overrides identically.
+ * The `yolo.agents` setting uses the same shape as the built-in `AgentConfig` (`baseArgs` and
+ * `skipFlag` as space-separated strings, `iconFile`, plus overridable `skipFlag` / `resumeFlag`).
+ * This just normalises it to the shared `AgentConfig` type so the merge below treats built-ins and
+ * user overrides identically.
  */
 function normalizeCustomTools(custom: settings.UserAgentOverride[]): AgentConfig[] {
   return custom.map((c) => ({
     id: c.id,
     command: c.command,
     displayName: c.displayName,
-    baseArgs: c.baseArgs ?? [],
-    yoloArgs: c.yoloArgs,
+    baseArgs: c.baseArgs ?? "",
+    skipFlag: c.skipFlag,
     resumeFlag: c.resumeFlag,
     iconFile: c.iconFile,
     enabled: c.enabled,

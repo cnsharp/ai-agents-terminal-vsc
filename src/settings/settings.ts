@@ -12,14 +12,14 @@ export interface PermissionRule {
  * Shape of an entry in the `yolo.agents` setting — user overrides / additions merged on top of the
  * built-in catalog in agents.json. It is intentionally identical to the built-in `AgentConfig` shape
  * (see src/agents/catalog.ts) so a built-in entry can be copy-pasted into the override and vice-versa,
- * and so users can override `yoloArgs` / `resumeFlag` per agent. `command` is required.
+ * and so users can override `skipFlag` / `resumeFlag` per agent. `command` is required.
  */
 export interface UserAgentOverride {
   id?: string;
   displayName?: string;
   command: string;
-  baseArgs?: string[];
-  yoloArgs?: string[];
+  baseArgs?: string;
+  skipFlag?: string;
   resumeFlag?: string;
   iconFile?: string;
   /** Set false to hide this agent (or a matching built-in) from the panel. Defaults to true. */

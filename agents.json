@@ -3,8 +3,8 @@
     "id": "claude",
     "displayName": "Claude Code",
     "command": "claude",
-    "baseArgs": [],
-    "yoloArgs": ["--dangerously-skip-permissions"],
+    "baseArgs": "",
+    "skipFlag": "--dangerously-skip-permissions",
     "resumeFlag": "-r",
     "iconFile": "claude.png"
   },
@@ -12,8 +12,8 @@
     "id": "codex",
     "displayName": "Codex",
     "command": "codex",
-    "baseArgs": [],
-    "yoloArgs": ["--full-auto"],
+    "baseArgs": "",
+    "skipFlag": "--full-auto",
     "resumeFlag": "--resume",
     "iconFile": "codex.png"
   },
@@ -21,7 +21,8 @@
     "id": "cline",
     "displayName": "Cline",
     "command": "cline",
-    "baseArgs": ["--auto-approve", "true"],
+    "baseArgs": "--auto-approve true",
+    "skipFlag": "",
     "resumeFlag": "--taskId",
     "iconFile": "cline.png"
   },
@@ -29,8 +30,8 @@
     "id": "codebuddy",
     "displayName": "CodeBuddy",
     "command": "codebuddy",
-    "baseArgs": [],
-    "yoloArgs": ["--permission-mode", "bypassPermissions"],
+    "baseArgs": "",
+    "skipFlag": "--permission-mode bypassPermissions",
     "resumeFlag": "-r",
     "iconFile": "codebuddy.png"
   },
@@ -38,16 +39,16 @@
     "id": "continue",
     "displayName": "Continue",
     "command": "cn",
-    "baseArgs": [],
-    "yoloArgs": ["--auto"],
+    "baseArgs": "",
+    "skipFlag": "--auto",
     "iconFile": "continue.png"
   },
   {
     "id": "copilot",
     "displayName": "Copilot",
     "command": "copilot",
-    "baseArgs": [],
-    "yoloArgs": ["--allow-all-tools", "--allow-all-paths"],
+    "baseArgs": "",
+    "skipFlag": "--allow-all-tools --allow-all-paths",
     "resumeFlag": "-r",
     "iconFile": "copilot.png"
   },
@@ -55,7 +56,8 @@
     "id": "cursor",
     "displayName": "Cursor",
     "command": "cursor-agent",
-    "baseArgs": ["agent"],
+    "baseArgs": "agent",
+    "skipFlag": "",
     "resumeFlag": "--resume",
     "iconFile": "cursor.png"
   },
@@ -63,15 +65,16 @@
     "id": "gemini",
     "displayName": "Gemini",
     "command": "gemini",
-    "baseArgs": [],
-    "yoloArgs": ["--yolo"],
+    "baseArgs": "",
+    "skipFlag": "--yolo",
     "iconFile": "gemini.png"
   },
   {
     "id": "goose",
     "displayName": "Goose",
     "command": "goose",
-    "baseArgs": [],
+    "baseArgs": "",
+    "skipFlag": "",
     "resumeFlag": "-r",
     "iconFile": "goose.png"
   },
@@ -79,7 +82,8 @@
     "id": "hermes",
     "displayName": "Hermes",
     "command": "hermes",
-    "baseArgs": [],
+    "baseArgs": "",
+    "skipFlag": "",
     "resumeFlag": "-r",
     "iconFile": "hermes.png"
   },
@@ -87,15 +91,16 @@
     "id": "kilo",
     "displayName": "Kilo Code",
     "command": "kilo",
-    "baseArgs": ["run"],
-    "yoloArgs": ["--auto"],
+    "baseArgs": "run",
+    "skipFlag": "--auto",
     "iconFile": "kilo.png"
   },
   {
     "id": "kimi",
     "displayName": "Kimi",
     "command": "kimi",
-    "baseArgs": [],
+    "baseArgs": "",
+    "skipFlag": "",
     "resumeFlag": "-r",
     "iconFile": "kimi.png"
   },
@@ -103,22 +108,23 @@
     "id": "openclaw",
     "displayName": "OpenClaw",
     "command": "openclaw",
-    "baseArgs": [],
+    "baseArgs": "",
     "iconFile": "openclaw.png"
   },
   {
     "id": "opencode",
     "displayName": "OpenCode",
     "command": "opencode",
-    "baseArgs": [],
-    "yoloArgs": ["--auto"],
+    "baseArgs": "",
+    "skipFlag": "--auto",
     "iconFile": "opencode.png"
   },
   {
     "id": "pi",
     "displayName": "Pi",
     "command": "pi",
-    "baseArgs": [],
+    "baseArgs": "",
+    "skipFlag": "",
     "resumeFlag": "-r",
     "iconFile": "pi.png"
   },
@@ -126,14 +132,15 @@
     "id": "qoder",
     "displayName": "Qoder",
     "command": "qoder",
-    "baseArgs": [],
+    "baseArgs": "",
     "iconFile": "qoder.png"
   },
   {
     "id": "trae",
     "displayName": "TraeCode",
     "command": "traecli",
-    "baseArgs": [],
+    "baseArgs": "",
+    "skipFlag": "",
     "resumeFlag": "--resume",
     "iconFile": "trae.png"
   },
@@ -141,7 +148,7 @@
     "id": "zcode",
     "displayName": "ZCode",
     "command": "zcode",
-    "baseArgs": [],
+    "baseArgs": "",
     "iconFile": "zcode.png"
   }
 ]

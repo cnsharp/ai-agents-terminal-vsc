@@ -18,7 +18,7 @@ interface CustomToolRow {
   id: string;
   displayName: string;
   command: string;
-  baseArgs: string[];
+  baseArgs: string;
   iconFile: string;
 }
 interface SettingsState {
@@ -115,7 +115,7 @@ function addTool(): void {
   const id = `custom.${slug("tool" + (state.customTools.length + 1))}`;
   state.customTools = [
     ...state.customTools,
-    { id, displayName: "", command: "", baseArgs: [], iconFile: "" },
+    { id, displayName: "", command: "", baseArgs: "", iconFile: "" },
   ];
   render();
 }

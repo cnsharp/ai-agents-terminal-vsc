@@ -60,7 +60,7 @@
       "properties": {
         "yolo.agents": {
           "type": "array",
-          "description": "User overrides / additions merged on top of the built-in catalog in agents.json. Override a built-in by matching its `command` (only the fields you set replace it, including `yoloArgs` and `resumeFlag`); set `enabled: false` to hide a built-in; use a `command` not in agents.json to add a custom agent. Reload the window after editing.",
+          "description": "User overrides / additions merged on top of the built-in catalog in agents.json. Override a built-in by matching its `command` (only the fields you set replace it, including `skipFlag` and `resumeFlag`); set `enabled: false` to hide a built-in; use a `command` not in agents.json to add a custom agent. Reload the window after editing.",
           "items": {
             "type": "object",
             "required": [
@@ -77,18 +77,12 @@
                 "description": "Name shown in the panel. Defaults to `command` for custom agents."
               },
               "baseArgs": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                },
-                "description": "Arguments passed before the agent's subcommand."
+                "type": "string",
+                "description": "Space-separated arguments passed before the agent's subcommand (e.g. \"--auto-approve true\")."
               },
-              "yoloArgs": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                },
-                "description": "Extra args appended when YOLO (skip-permissions) mode is on."
+              "skipFlag": {
+                "type": "string",
+                "description": "Flag appended when YOLO (skip-permissions) mode is on (e.g. \"--dangerously-skip-permissions\", \"-y\")."
               },
               "resumeFlag": {
                 "type": "string",
