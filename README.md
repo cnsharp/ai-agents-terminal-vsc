@@ -31,6 +31,24 @@ in `package.json`.
 Open the Terminal dropdown / **Terminal: Select Default Profile** and choose **Claude Code** or **Codex**.
 The agent launches in a new terminal tab.
 
+## No extension needed (just edit settings.json)
+
+This demo only contributes two static terminal profiles — something VS Code already supports natively.
+You don't have to install the extension at all; just add the profiles to your own `settings.json`:
+
+```jsonc
+// settings.json (user or workspace scope)
+"terminal.integrated.profiles.osx": {
+  "Claude Code": { "path": "claude", "icon": "$(sparkle)" },
+  "Codex":       { "path": "codex",  "icon": "$(sparkle)" }
+}
+// use terminal.integrated.profiles.linux / .windows for other platforms
+```
+
+They appear in **Terminal: Select Default Profile** / the new-terminal dropdown exactly as the
+contributed profiles do. The extension's only real advantage is one-click distribution (a VSIX) versus
+hand-editing JSON — there is no extra behaviour.
+
 ## Add or change an agent
 
 Because the config is static in `package.json`, edit the `contributes.terminal.profiles` array directly:

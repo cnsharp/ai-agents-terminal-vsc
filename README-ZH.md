@@ -30,6 +30,23 @@
 打开终端下拉 / **Terminal: Select Default Profile**，选择 **Claude Code** 或 **Codex**，
 Agent 会在新的终端标签页中启动。
 
+## 不用装插件（直接改 settings.json 即可）
+
+本演示只是贡献了两个静态终端 profile —— 而这本是 VS Code 原生就支持的能力。
+你完全不必安装这个扩展，只需在自己的 `settings.json` 里加上这两个 profile 即可：
+
+```jsonc
+// settings.json（用户或工作区作用域）
+"terminal.integrated.profiles.osx": {
+  "Claude Code": { "path": "claude", "icon": "$(sparkle)" },
+  "Codex":       { "path": "codex",  "icon": "$(sparkle)" }
+}
+// 其他平台请用 terminal.integrated.profiles.linux / .windows
+```
+
+它们会出现在 **Terminal: Select Default Profile** / 新建终端下拉里，与贡献的 profile 效果完全一致。
+这个扩展唯一的好处是“一键分发”（一个 VSIX），省去手改 JSON —— 除此之外没有任何额外行为。
+
 ## 新增或修改 Agent
 
 因为配置是静态写在 `package.json` 里的，直接编辑 `contributes.terminal.profiles` 数组即可：
