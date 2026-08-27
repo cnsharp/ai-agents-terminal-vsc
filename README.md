@@ -49,6 +49,16 @@ They appear in **Terminal: Select Default Profile** / the new-terminal dropdown 
 contributed profiles do. The extension's only real advantage is one-click distribution (a VSIX) versus
 hand-editing JSON — there is no extra behaviour.
 
+**Where is `settings.json`?**
+
+- **macOS**: `~/Library/Application Support/Code/User/settings.json`
+- **Windows**: `%APPDATA%\Code\User\settings.json`
+- **Linux**: `~/.config/Code/User/settings.json`
+- Workspace scope (per project): `<project>/.vscode/settings.json`
+
+Or open it from the Command Palette → **Preferences: Open User Settings (JSON)** (global) or
+**Preferences: Open Workspace Settings (JSON)** (project-local).
+
 ## Add or change an agent
 
 Because the config is static in `package.json`, edit the `contributes.terminal.profiles` array directly:

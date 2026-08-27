@@ -47,6 +47,16 @@ Agent 会在新的终端标签页中启动。
 它们会出现在 **Terminal: Select Default Profile** / 新建终端下拉里，与贡献的 profile 效果完全一致。
 这个扩展唯一的好处是“一键分发”（一个 VSIX），省去手改 JSON —— 除此之外没有任何额外行为。
 
+**`settings.json` 在哪里？**
+
+- **macOS**：`~/Library/Application Support/Code/User/settings.json`
+- **Windows**：`%APPDATA%\Code\User\settings.json`
+- **Linux**：`~/.config/Code/User/settings.json`
+- 工作区级（按项目）：`<project>/.vscode/settings.json`
+
+也可以从命令面板打开： **Preferences: Open User Settings (JSON)**（全局）或
+**Preferences: Open Workspace Settings (JSON)**（项目级）。
+
 ## 新增或修改 Agent
 
 因为配置是静态写在 `package.json` 里的，直接编辑 `contributes.terminal.profiles` 数组即可：
