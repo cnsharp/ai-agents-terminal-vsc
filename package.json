@@ -1,0 +1,122 @@
+{
+  "name": "ai-agents-terminal",
+  "displayName": "AI Agents Terminal",
+  "description": "Launch installed AI CLI agents from a status-bar launcher (opens in a terminal)",
+  "version": "0.1.0",
+  "publisher": "cnsharpstudio",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "keybindings": [
+      {
+        "command": "ai-agents-terminal.toggleYoloMode",
+        "key": "ctrl+alt+y",
+        "mac": "cmd+alt+y"
+      },
+      {
+        "command": "ai-agents-terminal.toggleResumeMode",
+        "key": "ctrl+alt+r",
+        "mac": "cmd+alt+r"
+      }
+    ],
+    "configuration": {
+      "title": "AI Agents Terminal",
+      "properties": {
+        "aiAgentsTerminal.yoloMode": {
+          "type": "boolean",
+          "default": false,
+          "description": "YOLO mode: launch agents with auto-approve flags so they run without permission prompts."
+        },
+        "aiAgentsTerminal.resumeMode": {
+          "type": "boolean",
+          "default": false,
+          "description": "Resume mode: launch agents with their resume flag (from agents.json) to continue the most recent session."
+        },
+        "aiAgentsTerminal.agents": {
+          "type": "array",
+          "description": "User overrides / additions merged on top of the built-in catalog in agents.json. Override a built-in by matching its `command` (only the fields you set replace it); set `enabled: false` to hide a built-in; use a `command` not in agents.json to add a custom agent. Reload the window after editing.",
+          "items": {
+            "type": "object",
+            "required": ["command"],
+            "additionalProperties": false,
+            "properties": {
+              "command": {
+                "type": "string",
+                "description": "CLI binary launched in the terminal (also used for PATH detection). Required."
+              },
+              "displayName": {
+                "type": "string",
+                "description": "Name shown in the launcher. Defaults to `command` for custom agents."
+              },
+              "baseArgs": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "Arguments passed before the agent's subcommand."
+              },
+              "yoloArgs": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "Extra args appended when YOLO (auto-approve) mode is on."
+              },
+              "iconFile": {
+                "type": "string",
+                "description": "Icon filename under the extension's media/agents folder (e.g. claude.png). If omitted, a default terminal icon is used."
+              },
+              "enabled": {
+                "type": "boolean",
+                "default": true,
+                "description": "Set to false to hide an agent without deleting its entry."
+              },
+              "id": {
+                "type": "string",
+                "description": "Optional stable id (defaults to `command`)."
+              }
+            }
+          }
+        },
+        "aiAgentsTerminal.installedAgents": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "hidden": true,
+          "description": "Internal cache of AI agent commands detected on PATH. Maintained automatically — do not edit by hand. (internal)"
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "ai-agents-terminal.openMenu",
+        "title": "AI Agents",
+        "icon": "$(sparkle)"
+      },
+      {
+        "command": "ai-agents-terminal.toggleYoloMode",
+        "title": "AI Agents: Toggle YOLO Mode",
+        "icon": "$(zap)"
+      },
+      {
+        "command": "ai-agents-terminal.toggleResumeMode",
+        "title": "AI Agents: Toggle Resume Mode",
+        "icon": "$(history)"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.4.0"
+  }
+}

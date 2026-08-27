@@ -1,0 +1,9 @@
+node_modules/
+out/
+*.vsix
+.vscode-test/
+*.log
+.DS_Store
+
+# user workspace settings
+.vscode/
