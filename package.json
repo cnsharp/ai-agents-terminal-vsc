@@ -1,9 +1,9 @@
 {
-  "name": "yolo-vsc",
+  "name": "yolo",
   "displayName": "YOLO — AI Agents Extender",
   "description": "Launch AI CLI agents (Claude Code, Codex, CodeBuddy, Goose, …) in an embedded terminal with clickable file/type links.",
   "version": "0.1.0",
-  "publisher": "cnsharp",
+  "publisher": "cnsharpstudio",
   "engines": {
     "vscode": "^1.85.0"
   },

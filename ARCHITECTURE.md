@@ -95,7 +95,7 @@ and `skipEnabled`.
 ## 6. File layout
 
 ```
-yolo-vsc/
+yolo/
 ├── package.json            manifest: commands, views, configuration, deps, build scripts
 ├── tsconfig.json
 ├── media/icon.svg
