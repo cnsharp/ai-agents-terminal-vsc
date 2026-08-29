@@ -19,7 +19,7 @@ export function renderPanelHtml(
   <style>
     html, body { margin: 0; padding: 0; height: 100%; background: var(--vscode-editor-background); color: var(--vscode-foreground); font-family: var(--vscode-font-family); }
     #bar { display: flex; gap: 8px; align-items: center; padding: 6px 8px; background: var(--vscode-sideBar-background); border-bottom: 1px solid var(--vscode-panel-border); }
-    #bar select, #bar button { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: 1px solid var(--vscode-panel-border); padding: 3px 6px; border-radius: 3px; }
+    #bar button { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: 1px solid var(--vscode-panel-border); padding: 3px 6px; border-radius: 3px; }
     #bar .yolo-toggle { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 24px; padding: 0; cursor: pointer; background: transparent; }
     #bar .yolo-toggle:hover { background: var(--vscode-button-secondaryHoverBackground); }
     #bar .yolo-toggle .ic { width: 16px; height: 16px; display: none; }
@@ -34,14 +34,13 @@ export function renderPanelHtml(
     body.vscode-dark .yolo-toggle.active .ic-on-dark,
     body.vscode-high-contrast .yolo-toggle.active .ic-on-dark { display: inline-block; }
     #bar button:hover { background: var(--vscode-button-secondaryHoverBackground); }
-    #status { position: absolute; left: 0; right: 0; bottom: 0; padding: 3px 8px; font-size: 11px; opacity: 0.8; background: var(--vscode-sideBar-background); border-top: 1px solid var(--vscode-panel-border); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    #status.err { color: var(--vscode-errorForeground, #f48771); }
     .agent-pick { position: relative; display: inline-block; }
     .agent-btn { min-width: 140px; text-align: left; }
     .agent-menu { position: absolute; z-index: 50; top: 100%; left: 0; margin-top: 2px; min-width: 260px; max-height: 320px; overflow-y: auto; background: var(--vscode-dropdown-background, var(--vscode-editor-background)); color: var(--vscode-dropdown-foreground, var(--vscode-foreground)); border: 1px solid var(--vscode-dropdown-border, var(--vscode-panel-border)); border-radius: 4px; box-shadow: 0 2px 10px rgba(0,0,0,0.4); padding: 4px; }
     .agent-opt { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 3px; cursor: pointer; }
     .agent-opt:hover, .agent-opt.active { background: var(--vscode-list-hoverBackground, #094771); }
     .agent-opt .logo { width: 18px; height: 18px; flex: 0 0 auto; object-fit: contain; border-radius: 4px; }
+    .agent-opt .logo.lightning { display: inline-flex; align-items: center; justify-content: center; font-size: 14px; line-height: 1; opacity: 0.75; }
     .agent-opt .meta { display: flex; flex-direction: column; min-width: 0; }
     .agent-opt .name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     #terminal { position: absolute; top: 38px; left: 0; right: 0; bottom: 0; padding: 4px; }
@@ -74,7 +73,6 @@ export function renderPanelHtml(
     <button id="launch">Launch</button>
   </div>
   <div id="terminal"></div>
-  <div id="status">connecting…</div>
   <script src="${scriptUri}"></script>
 </body>
 </html>`;

@@ -192,6 +192,11 @@ export class YoloViewProvider implements vscode.WebviewViewProvider {
       case "hover":
         void this.hover(msg as { reqId: number; payload: LinkPayload });
         break;
+      case "agentListMissing":
+        // Watchdog fired: the host never delivered the agent list. Surface it as a real notification
+        // (the panel has no status bar).
+        vscode.window.showErrorMessage("YOLO: the agent list failed to load.");
+        break;
     }
   }
 

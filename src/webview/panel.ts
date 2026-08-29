@@ -7,7 +7,7 @@
 // the host from learning the webview is ready and shipping the agent list — otherwise the dropdown
 // stays empty. Terminal init is therefore isolated in a try/catch.
 
-import { Terminal, type ILink, type Terminal as ITerminal } from "xterm";
+import { Terminal, type ILink, type ITheme, type Terminal as ITerminal } from "xterm";
 import { FitAddon } from "xterm-addon-fit";
 import "xterm/css/xterm.css";
 
@@ -102,14 +102,6 @@ function escapeAttr(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-function setStatus(text: string, isErr = false): void {
-  const el = document.getElementById("status");
-  if (el) {
-    el.textContent = text;
-    el.classList.toggle("err", isErr);
-  }
-}
-
 // Render the YOLO toggle button with its four icon variants (off/on × light/dark). The active
 // variant is selected purely via CSS (body.vscode-dark etc.), so no JS theme detection is needed.
 function renderSkipToggle(): void {
@@ -154,7 +146,7 @@ function renderAgentMenu(): void {
     .map((a) => {
       const logo = a.iconUri
         ? `<img class="logo" src="${escapeAttr(a.iconUri)}" alt="" />`
-        : "";
+        : `<span class="logo lightning" title="no icon set">⚡</span>`;
       return `<div class="agent-opt ${a.id === selectedAgentId ? "active" : ""}" data-id="${a.id}" title="${escapeAttr(a.resolvedPath ?? "")}">
         ${logo}<div class="meta"><div class="name">${escapeAttr(a.displayName)}</div></div>
       </div>`;
@@ -206,8 +198,6 @@ window.addEventListener("message", (ev: MessageEvent) => {
       resumeIcons = msg.resumeIcons;
       renderSkipToggle();
       renderResumeToggle();
-      const installed = agents.filter((a) => a.resolvedPath).length;
-      setStatus(`${agents.length} agents · ${installed} installed on PATH`);
       break;
     case "data":
       // Only the embedded backend pipes output here; the vscode-terminal backend renders in the
@@ -280,9 +270,52 @@ vscode.postMessage({ type: "ready" });
 // Watchdog: if the host never sends the agent list, surface it instead of a silent empty dropdown.
 setTimeout(() => {
   if (agents.length === 0) {
-    setStatus("⚠ host did not send the agent list", true);
+    vscode.postMessage({ type: "agentListMissing" });
   }
 }, 3000);
+
+// --- Theme: make xterm follow the active VS Code color theme ---
+// xterm paints its own background over the canvas, so it won't inherit the page's `var(--vscode-…)`
+// background. We read VS Code's theme CSS variables and translate them into an xterm ITheme, then
+// re-apply whenever the theme changes (VS Code rewrites the `body` inline style on theme switch).
+function readVscodeColor(name: string): string | undefined {
+  const v = getComputedStyle(document.body).getPropertyValue(name).trim();
+  return v || undefined;
+}
+
+function buildTerminalTheme(): ITheme {
+  const bg =
+    readVscodeColor("--vscode-terminal-background") ??
+    readVscodeColor("--vscode-editor-background") ??
+    "#1e1e1e";
+  const fg =
+    readVscodeColor("--vscode-terminal-foreground") ??
+    readVscodeColor("--vscode-editor-foreground") ??
+    "#cccccc";
+  const cursor =
+    readVscodeColor("--vscode-terminalCursor-foreground") ??
+    readVscodeColor("--vscode-editorCursor-foreground") ??
+    "#1E64B4";
+  const selBg =
+    readVscodeColor("--vscode-terminal-selectionBackground") ??
+    readVscodeColor("--vscode-editor-selectionBackground");
+  const theme: ITheme = { background: bg, foreground: fg, cursor };
+  if (selBg) {
+    theme.selectionBackground = selBg;
+  }
+  return theme;
+}
+
+function applyTheme(): void {
+  if (!term) {
+    return;
+  }
+  term.options.theme = buildTerminalTheme();
+  const wrap = document.getElementById("terminal");
+  if (wrap) {
+    wrap.style.background = readVscodeColor("--vscode-editor-background") ?? "";
+  }
+}
 
 // --- Terminal (xterm) — isolated so a failure here can't break the agent picker above ---
 let term: ITerminal | undefined;
@@ -395,7 +428,7 @@ function initTerminal(): void {
     fontFamily: "var(--vscode-editor-font-family, monospace)",
     fontSize: 13,
     cursorBlink: true,
-    theme: { cursor: "#1E64B4" },
+    theme: buildTerminalTheme(),
   });
   const fit = new FitAddon();
   t.loadAddon(fit);
@@ -413,6 +446,12 @@ function initTerminal(): void {
   });
   t.onResize(({ cols, rows }) => vscode.postMessage({ type: "resize", cols, rows }));
   window.addEventListener("resize", () => fit.fit());
+
+  // Re-theme xterm when the user switches VS Code color themes. VS Code rewrites the theme CSS
+  // variables on `body` (and sometimes `:root`) when the theme changes, so watch both.
+  const themeObserver = new MutationObserver(() => applyTheme());
+  themeObserver.observe(document.body, { attributes: true, attributeFilter: ["style"] });
+  themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["style"] });
 
   t.registerLinkProvider({
     provideLinks: (bufferLineNumber, callback) => {
