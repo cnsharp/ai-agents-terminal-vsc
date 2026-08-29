@@ -73,21 +73,3 @@ export function resolveLaunchShell(
   const s = configured || process.env.SHELL || "/bin/bash";
   return { shell: s, args: [...extraArgs, interactive ? "-lic" : "-lc", fullCommand] };
 }
-
-/**
- * Choose the shell + argv prefix for a PATH probe (`command -v` / `where`). Reuses the configured
- * shell so a custom POSIX shell on Windows is honoured in detection too.
- */
-export function resolveProbeShell(): ShellSpec {
-  const configured = settings.getShell();
-  if (process.platform === "win32") {
-    const s = configured || detectWindowsShell();
-    if (isPosixShell(s)) {
-      return { shell: s, args: ["-lic"] };
-    }
-    return { shell: s, args: ["/c"] };
-  }
-  const s = configured || process.env.SHELL || "/bin/bash";
-  // `-lc` (login, non-interactive): honours rc PATH without hanging when spawned without a tty.
-  return { shell: s, args: ["-lc"] };
-}

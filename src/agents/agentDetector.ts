@@ -94,7 +94,4 @@ function runVersionProbe(command: string): boolean {
   }
 }
 
-/** Detect which promoted/custom agents are installed; returns their command binaries. */
-export function detectInstalled(commands: string[]): string[] {
-  return commands.filter((c) => canExecute(c));
-}
+
