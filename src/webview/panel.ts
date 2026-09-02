@@ -7,7 +7,7 @@
 // the host from learning the webview is ready and shipping the agent list — otherwise the dropdown
 // stays empty. Terminal init is therefore isolated in a try/catch.
 
-import { Terminal, type ILink, type ITheme, type Terminal as ITerminal } from "xterm";
+import { Terminal, type IBufferLine, type ILink, type ITheme, type Terminal as ITerminal } from "xterm";
 import { FitAddon } from "xterm-addon-fit";
 import "xterm/css/xterm.css";
 
@@ -452,6 +452,32 @@ function initTerminal(): void {
   themeObserver.observe(document.body, { attributes: true, attributeFilter: ["style"] });
   themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["style"] });
 
+/**
+ * Convert a string (character) index within a buffer line into a 1-based CELL column. xterm link
+ * ranges are cell-based, but a regex match index is a character index — and wide glyphs (CJK, etc.)
+ * occupy two cells. Without this conversion, every link that follows a wide character is placed at the
+ * wrong column, and a link near a line end bleeds onto the next line.
+ */
+function cellXForCharIndex(line: IBufferLine, charIndex: number): number {
+  let chars = 0;
+  let x = 0;
+  while (chars < charIndex) {
+    const cell = line.getCell(x);
+    if (!cell) {
+      break;
+    }
+    const w = cell.getWidth();
+    if (w === 0) {
+      // Continuation cell of a wide glyph; advance without consuming a character.
+      x++;
+      continue;
+    }
+    chars++;
+    x += w;
+  }
+  return x;
+}
+
   t.registerLinkProvider({
     provideLinks: (bufferLineNumber, callback) => {
       const line = t.buffer.active.getLine(bufferLineNumber);
@@ -462,8 +488,8 @@ function initTerminal(): void {
       const text = line.translateToString(true);
       const links: ILink[] = provideLinks(text).map((c) => ({
         range: {
-          start: { x: c.start + 1, y: bufferLineNumber },
-          end: { x: c.start + c.length + 1, y: bufferLineNumber },
+          start: { x: cellXForCharIndex(line, c.start) + 1, y: bufferLineNumber },
+          end: { x: cellXForCharIndex(line, c.start + c.length) + 1, y: bufferLineNumber },
         },
         text: text.substr(c.start, c.length),
         activate: () => vscode.postMessage({ type: "navigate", payload: c.payload }),
