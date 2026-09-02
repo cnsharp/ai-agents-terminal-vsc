@@ -39,10 +39,11 @@ You don't have to install the extension at all; just add the profiles to your ow
 ```jsonc
 // settings.json (user or workspace scope)
 "terminal.integrated.profiles.osx": {
-  "Claude Code": { "path": "claude", "icon": "$(sparkle)" },
-  "Codex":       { "path": "codex",  "icon": "$(sparkle)" }
+  "Claude Code": { "path": "claude", "args": ["--dangerously-skip-permissions"], "icon": "robot" },
+  "Codex":       { "path": "codex",  "args": ["--full-auto"],                    "icon": "robot" }
 }
 // use terminal.integrated.profiles.linux / .windows for other platforms
+// drop `args` (or add a second profile without it) to keep the permission prompts
 ```
 
 They appear in **Terminal: Select Default Profile** / the new-terminal dropdown exactly as the
@@ -67,8 +68,8 @@ Because the config is static in `package.json`, edit the `contributes.terminal.p
 "contributes": {
   "terminal": {
     "profiles": [
-      { "id": "claude", "title": "Claude Code", "icon": "$(sparkle)", "shellPath": "claude" },
-      { "id": "codex", "title": "Codex", "icon": "$(sparkle)", "shellPath": "codex" }
+      { "id": "claude", "title": "Claude Code", "icon": "robot", "shellPath": "claude" },
+      { "id": "codex", "title": "Codex", "icon": "robot", "shellPath": "codex" }
     ]
   }
 }

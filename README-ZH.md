@@ -38,10 +38,11 @@ Agent 会在新的终端标签页中启动。
 ```jsonc
 // settings.json（用户或工作区作用域）
 "terminal.integrated.profiles.osx": {
-  "Claude Code": { "path": "claude", "icon": "$(sparkle)" },
-  "Codex":       { "path": "codex",  "icon": "$(sparkle)" }
+  "Claude Code": { "path": "claude", "args": ["--dangerously-skip-permissions"], "icon": "robot" },
+  "Codex":       { "path": "codex",  "args": ["--full-auto"],                    "icon": "robot" }
 }
 // 其他平台请用 terminal.integrated.profiles.linux / .windows
+// 去掉 `args`（或再加一条不带 args 的 profile）即保留权限确认提示
 ```
 
 它们会出现在 **Terminal: Select Default Profile** / 新建终端下拉里，与贡献的 profile 效果完全一致。
@@ -65,8 +66,8 @@ Agent 会在新的终端标签页中启动。
 "contributes": {
   "terminal": {
     "profiles": [
-      { "id": "claude", "title": "Claude Code", "icon": "$(sparkle)", "shellPath": "claude" },
-      { "id": "codex", "title": "Codex", "icon": "$(sparkle)", "shellPath": "codex" }
+      { "id": "claude", "title": "Claude Code", "icon": "robot", "shellPath": "claude" },
+      { "id": "codex", "title": "Codex", "icon": "robot", "shellPath": "codex" }
     ]
   }
 }

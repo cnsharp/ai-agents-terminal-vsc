@@ -20,13 +20,13 @@
         {
           "id": "claude",
           "title": "Claude Code",
-          "icon": "$(sparkle)",
+          "icon": "robot",
           "shellPath": "claude"
         },
         {
           "id": "codex",
           "title": "Codex",
-          "icon": "$(sparkle)",
+          "icon": "robot",
           "shellPath": "codex"
         }
       ]
