@@ -32,7 +32,7 @@
     "command": "codebuddy",
     "baseArgs": "",
     "skipFlag": "--permission-mode bypassPermissions",
-    "resumeFlag": "-r",
+    "resumeFlag": "--continue",
     "iconFile": "codebuddy.png"
   },
   {
