@@ -10,13 +10,15 @@ frames, type/member names, and URLs all become navigation links.
 
 ## Features (mirrors the IntelliJ plugin)
 
-- Agent dropdown populated from a promoted list + user custom tools, filtered by what is actually installed.
+- Agent dropdown populated from a promoted list + user custom tools, filtered by what is actually installed, in a docked activity-bar view.
 - **YOLO toggle** injects the per-agent skip-permission flag (e.g. `--dangerously-skip-permissions`,
   `-y`, `--yolo`) or environment variable (`GOOSE_MODE=auto`).
-- Embedded interactive PTY terminal (node-pty + xterm.js) launched inside a login shell so rc-defined
+- **Resume toggle** continues the agent's most recent session via its `resumeFlag`.
+- Embedded interactive PTY terminal (node-pty + bundled xterm.js) launched inside a login shell so rc-defined
   PATH (nvm/fnm/npm global bin) is honoured.
-- Clickable terminal links: `path:line:col`, quoted paths, stack-trace frames, bare file names,
-  Python tracebacks, type names (`com.foo.Bar`), `Class.member` refs, and `http(s)://` URLs.
+- Clickable terminal links with de-duplication/priority: `path:line:col`, quoted paths, stack-trace
+  frames, bare file names, Python tracebacks, type names (`com.foo.Bar`), `Class.member` refs, and `http(s)://` URLs.
+- Agent configuration (skip flags / base args / resume flags, global YOLO & Resume defaults) lives in **VS Code Settings** — edit `yolo.agents` and the other `yolo.*` settings in `settings.json`; there is no in-panel Settings UI.
 
 ## Build & run (development)
 
@@ -27,15 +29,6 @@ npm test           # unit tests for the link engine
 # Press F5 in VS Code with this folder open -> "Run Extension" launches a new Extension Development Host.
 # Run the command: YOLO: Open Agents Panel
 ```
-
-## Features
-
-- Agent dropdown (promoted + custom tools, filtered by what is installed) in a docked activity-bar view.
-- **YOLO toggle** injects the per-agent skip-permission flag/env.
-- Embedded interactive PTY (`node-pty` + bundled `xterm.js`) launched in a login shell.
-- Clickable terminal links with de-duplication/priority: `path:line:col`, quoted paths, stack-trace
-  frames, bare file names, Python tracebacks, type names (`com.foo.Bar`), `Class.member` refs, URLs.
-- Agent configuration (skip flags / base args / resume flags, global YOLO & Resume defaults) lives in **VS Code Settings** — edit `yolo.agents` and the other `yolo.*` settings in `settings.json`; there is no in-panel Settings UI.
 
 ## Layout
 
@@ -52,7 +45,6 @@ src/
     panelHtml.ts               CSP-safe HTML renderer for the bundled webview
   webview/
     panel.ts                   bundled webview entry: xterm + combined link provider
-    settings.ts                bundled settings webview entry
 media/dist/                    esbuild output (bundled xterm) — referenced by the webview
 test/                          node:test unit tests (linkPatterns / linkParser)
 ```
