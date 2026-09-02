@@ -25,7 +25,7 @@ npm install
 npm run build      # tsc (extension + webview entries) + esbuild (bundle xterm into media/dist)
 npm test           # unit tests for the link engine
 # Press F5 in VS Code with this folder open -> "Run Extension" launches a new Extension Development Host.
-# Run the command: YOLO: Open Agents Panel   (also: YOLO: Open Settings)
+# Run the command: YOLO: Open Agents Panel
 ```
 
 ## Features
@@ -35,7 +35,7 @@ npm test           # unit tests for the link engine
 - Embedded interactive PTY (`node-pty` + bundled `xterm.js`) launched in a login shell.
 - Clickable terminal links with de-duplication/priority: `path:line:col`, quoted paths, stack-trace
   frames, bare file names, Python tracebacks, type names (`com.foo.Bar`), `Class.member` refs, URLs.
-- A **Settings** view to edit per-agent skip flags / base args / resume flags and the global skip default.
+- Agent configuration (skip flags / base args / resume flags, global YOLO & Resume defaults) lives in **VS Code Settings** — edit `yolo.agents` and the other `yolo.*` settings in `settings.json`; there is no in-panel Settings UI.
 
 ## Layout
 
@@ -44,7 +44,7 @@ src/
   extension.ts                 activation + command + view-provider registration
   agents/                      promoted agents, skip-flag/env data, install detection (ported)
   links/                       link regex patterns (ported) + line parser
-  settings/                    settings.json-backed config + settings webview view
+  settings/                    settings.json-backed config (schema in package.json contributes.configuration)
   navigation/                  file open + workspace-symbol lookup (gotoClassContributor equivalent)
   terminal/
     terminalProvider.ts        node-pty spawn (ported launch path)

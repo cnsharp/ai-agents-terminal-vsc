@@ -48,46 +48,86 @@
       "properties": {
         "yolo.agents": {
           "type": "array",
-          "description": "User overrides / additions merged on top of the built-in catalog in agents.json. Override a built-in by matching its `command` (only the fields you set replace it, including `skipFlag` and `resumeFlag`); set `enabled: false` to hide a built-in; use a `command` not in agents.json to add a custom agent. Reload the window after editing.",
+          "markdownDescription": "User overrides / additions merged on top of the built-in catalog in agents.json. Override a built-in by matching its `command` (only the fields you set replace it, including `skipFlag` and `resumeFlag`); set `enabled: false` to hide a built-in; use a `command` not in agents.json to add a custom agent.\n\nEdit it directly in **VS Code Settings** — there is no in-panel Settings UI; changes apply on the next launch. Example — change Claude's resume flag and hide Gemini:\n```json\n\"yolo.agents\": [\n  { \"command\": \"claude\", \"resumeFlag\": \"--continue\" },\n  { \"command\": \"gemini\", \"enabled\": false }\n]\n```\n\nLaunch args are ordered `baseArgs` → `skipFlag` → `resumeFlag`; `skipFlag` only appends when YOLO (skip-permissions) mode is on, `resumeFlag` only when Resume mode is on.",
           "items": {
             "type": "object",
             "required": [
               "command"
             ],
             "additionalProperties": false,
+            "defaultSnippets": [
+              {
+                "label": "Override a built-in agent",
+                "description": "Change only the fields you set on an agent from agents.json, matched by command.",
+                "body": {
+                  "command": "${1:claude}",
+                  "resumeFlag": "${2:--continue}"
+                }
+              },
+              {
+                "label": "Hide a built-in agent",
+                "description": "Keep the agent in agents.json but stop showing it in the panel.",
+                "body": {
+                  "command": "${1:gemini}",
+                  "enabled": false
+                }
+              },
+              {
+                "label": "Add a custom agent",
+                "description": "Add an agent that is not in agents.json (command only is enough).",
+                "body": {
+                  "command": "${1:my-agent}",
+                  "displayName": "${2:My Agent}",
+                  "baseArgs": "${3:}",
+                  "skipFlag": "${4:}",
+                  "resumeFlag": "${5:}"
+                }
+              }
+            ],
             "properties": {
               "command": {
                 "type": "string",
-                "description": "CLI binary launched in the terminal (also used for PATH detection). Required."
+                "markdownDescription": "CLI binary launched in the terminal (also used for PATH detection). Required. Match a built-in's `command` to override it; use a new one to add a custom agent.",
+                "examples": ["claude", "codex", "cursor-agent"]
               },
               "displayName": {
                 "type": "string",
-                "description": "Name shown in the panel. Defaults to `command` for custom agents."
+                "markdownDescription": "Name shown in the panel. Defaults to `command` for custom agents."
               },
               "baseArgs": {
                 "type": "string",
-                "description": "Space-separated arguments passed before the agent's subcommand (e.g. \"--auto-approve true\")."
+                "markdownDescription": "Space-separated arguments always passed to the command, before any mode flag (e.g. `agent` for `cursor-agent`, `run` for `kilo`).",
+                "examples": ["agent", "run", "--auto-approve true"]
               },
               "skipFlag": {
                 "type": "string",
-                "description": "Flag appended when YOLO (skip-permissions) mode is on (e.g. \"--dangerously-skip-permissions\", \"-y\")."
+                "markdownDescription": "Space-separated flag appended when YOLO (skip-permissions) mode is on (e.g. `--dangerously-skip-permissions` for Claude, `--yolo` for Gemini). Leave it empty to launch with no auto-approve flag.",
+                "examples": [
+                  "--dangerously-skip-permissions",
+                  "--full-auto",
+                  "--yolo",
+                  "--permission-mode bypassPermissions",
+                  "--allow-all-tools --allow-all-paths"
+                ]
               },
               "resumeFlag": {
                 "type": "string",
-                "description": "Flag appended when Resume mode is on (e.g. `--resume`) to continue the most recent session."
+                "markdownDescription": "Space-separated flag appended when Resume mode is on, to continue the most recent session (e.g. `-r` for Claude, `--resume` for Codex and Cursor). Omit it and the agent launches normally even in Resume mode.",
+                "examples": ["-r", "--resume", "--continue"]
               },
               "iconFile": {
                 "type": "string",
-                "description": "Icon filename under the extension's media/agents folder (e.g. claude.png). If omitted, a default terminal icon is used."
+                "markdownDescription": "Icon filename under the extension's `media/agents` folder (e.g. `claude.png`). If omitted, a default terminal icon is used.",
+                "examples": ["claude.png", "codex.png"]
               },
               "enabled": {
                 "type": "boolean",
                 "default": true,
-                "description": "Set to false to hide an agent without deleting its entry."
+                "markdownDescription": "Set to `false` to hide an agent without deleting its entry."
               },
               "id": {
                 "type": "string",
-                "description": "Optional stable id (defaults to `command`)."
+                "markdownDescription": "Optional stable id (defaults to `command`). An override may also match a built-in by its `id`."
               }
             }
           }
@@ -95,32 +135,48 @@
         "yolo.permissionRules": {
           "type": "array",
           "default": [],
-          "description": "Per-agent skip-permission flag. Each: {agentId, flag}."
+          "markdownDescription": "Per-agent skip-permission flag, as a single list of `{ agentId, flag }` entries. `agentId` matches an agent's `command` or `id`; the `flag` is appended when YOLO mode is on, taking precedence over the agent's own `skipFlag` in `yolo.agents`. Prefer setting `skipFlag` directly on the agent in `yolo.agents`; use this only when you want one shared list. Example:\n```json\n\"yolo.permissionRules\": [\n  { \"agentId\": \"claude\", \"flag\": \"--dangerously-skip-permissions\" },\n  { \"agentId\": \"codex\", \"flag\": \"--full-auto\" }\n]\n```",
+          "items": {
+            "type": "object",
+            "required": ["agentId", "flag"],
+            "properties": {
+              "agentId": {
+                "type": "string",
+                "markdownDescription": "Agent `command` or `id` this rule applies to.",
+                "examples": ["claude", "codex"]
+              },
+              "flag": {
+                "type": "string",
+                "markdownDescription": "Space-separated flag appended when YOLO mode is on.",
+                "examples": ["--dangerously-skip-permissions", "--full-auto", "--yolo"]
+              }
+            }
+          }
         },
         "yolo.skipEnabled": {
           "type": "boolean",
           "default": false,
-          "description": "Inject the skip-permission flag when launching an agent."
+          "markdownDescription": "YOLO mode: launch agents with their skip-permission (auto-approve) flag so they run without permission prompts. Toggle it from the `$(zap)` button in the panel or `Ctrl/Cmd+Alt+Y`."
         },
         "yolo.resumeMode": {
           "type": "boolean",
           "default": false,
-          "description": "Append the agent's resume flag (e.g. --resume) to continue the most recent session."
+          "markdownDescription": "Resume mode: launch agents with their `resumeFlag` to continue the most recent session. Toggle it from the `$(history)` button in the panel or `Ctrl/Cmd+Alt+R`."
         },
         "yolo.agentBaseArgs": {
           "type": "object",
           "default": {},
-          "description": "Extra launch args per promoted agent id (lower-cased)."
+          "markdownDescription": "Extra launch args per agent, keyed by the agent's lower-cased `id` (falls back to a match against `command`). Appended after the agent's own `baseArgs` from `yolo.agents`. Prefer setting `baseArgs` on the agent in `yolo.agents`; use this only when you want one shared map. Example:\n```json\n\"yolo.agentBaseArgs\": { \"cursor-agent\": \"agent\", \"kilo\": \"run\" }\n```"
         },
         "yolo.installedCommands": {
           "type": "array",
           "default": [],
-          "description": "Cache of commands detected as installed on this machine."
+          "markdownDescription": "Internal cache of AI agent commands detected on PATH. Maintained automatically — do not edit by hand. (internal)"
         },
         "yolo.shell": {
           "type": "string",
           "default": "",
-          "description": "Override the shell used to launch agents and probe PATH. Absolute path or a binary name on PATH. On Windows, leaving this empty auto-detects a POSIX shell (Git Bash / WSL) when needed; otherwise cmd.exe is used."
+          "markdownDescription": "Override the shell used to launch agents and probe PATH. Absolute path or a binary name on PATH. On Windows, leaving this empty auto-detects a POSIX shell (Git Bash / WSL) when needed; otherwise `cmd.exe` is used."
         },
         "yolo.shellArgs": {
           "type": "array",
@@ -128,7 +184,7 @@
             "type": "string"
           },
           "default": [],
-          "description": "Extra arguments passed to the shell before the agent command (e.g. [\"-l\"]). Ignored on Windows cmd.exe."
+          "markdownDescription": "Extra arguments passed to the shell before the agent command (e.g. `[\"-l\"]`). Ignored on Windows `cmd.exe`."
         }
       }
     }

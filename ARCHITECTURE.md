@@ -23,7 +23,7 @@ output is made clickable: file paths (`src/Foo.kt:42`), stack-trace frames, type
 | `DefaultSkipFlags` / `DefaultSkipEnvs` | plain data maps | `src/agents/skipFlags.ts` |
 | `PromotedAgents` | plain data list | `src/agents/agents.ts` |
 | `PersistentStateComponent` / `@State` | `WorkspaceConfiguration` (settings.json) | `src/settings/settings.ts` |
-| `Configurable` (Settings \| Tools \| YOLO) | `contributes.configuration` + a **Settings webview** | `package.json` + `src/settings/settingsView.ts` |
+| `Configurable` (Settings \| Tools \| YOLO) | `contributes.configuration` (schema-only, edited in VS Code Settings) | `package.json` + `src/settings/settings.ts` |
 | `notificationGroup` | `vscode.window.show*Message` | `panel.ts` |
 
 ## 3. Data flow
@@ -72,7 +72,8 @@ no IntelliJ-style "navigate to the exact member in the same file" heuristics bey
 ### 5.3 Tool window vs WebviewView — DONE
 The IntelliJ docked, always-available tool window is implemented as a `WebviewViewProvider`
 (`yolo.panel`) in an activity-bar container, so it docks and persists while hidden. The
-`YOLO: Open Agents Panel` command focuses it. A second view (`yolo.settings`) holds the settings UI.
+`YOLO: Open Agents Panel` command focuses it. There is no separate Settings view — all configuration
+is edited directly in **VS Code Settings** (`yolo.*` in `settings.json`).
 
 ### 5.4 Link de-duplication / priority — DONE
 The original IntelliJ filters form a single pipeline where only the **first match per region** links.
@@ -86,12 +87,13 @@ Verified: `File "/x/main.py", line 7` → exactly one `file` link (with line 7);
 matches a `file` pattern links as `type` (higher priority). The same de-dup runs in `parseLine`
 (`src/links/linkParser.ts`) so hover/peek and the webview stay consistent.
 
-### 5.5 Settings UI — DONE
-The IntelliJ `Configurable` is replaced by `contributes.configuration` (settings.json) **plus** a
-**Settings webview** (`src/settings/settingsView.ts`) showing a per-agent table: skip flag, base args,
-and resume flag per agent, plus the global "skip by default" toggle. Saving writes `permissionRules`,
-`agentBaseArgs`, `agentResumeFlags`, and `skipEnabled`. `agentResumeFlags` overrides the catalog's
-`resumeFlag` at launch (keyed by lower-cased agent id, mirroring `agentBaseArgs`).
+### 5.5 Configuration — schema-only (DONE)
+The IntelliJ `Configurable` is replaced by `contributes.configuration` in `package.json`, edited in
+VS Code Settings — no in-panel Settings UI. Per-agent overrides live in `yolo.agents` (an array of
+`{ command, displayName, baseArgs, skipFlag, resumeFlag, iconFile, enabled, id }`); the `skipFlag` /
+`resumeFlag` fields there are the primary way to set per-agent flags. Two legacy per-id maps still work
+as fallbacks: `yolo.permissionRules` (`{ agentId, flag }[]`) and `yolo.agentBaseArgs` (`Record<id, args>`).
+The global toggles are `yolo.skipEnabled` and `yolo.resumeMode`.
 
 ## 6. File layout
 
@@ -100,7 +102,7 @@ yolo/
 ├── package.json            manifest: commands, views, configuration, deps, build scripts
 ├── tsconfig.json
 ├── media/icon.svg
-├── media/dist/             esbuild output: panel.{js,css}, settings.js (bundled xterm)
+├── media/dist/             esbuild output: panel.{js,css} (bundled xterm)
 ├── test/                   node:test unit tests (linkPatterns / linkParser)
 ├── README.md
 ├── ARCHITECTURE.md
@@ -108,10 +110,10 @@ yolo/
     ├── extension.ts                 activate + command + view-provider registration
     ├── agents/{agents,skipFlags,agentDetector}.ts
     ├── links/{linkPatterns,linkParser}.ts
-    ├── settings/settings.ts + settingsView.ts
+    ├── settings/settings.ts                 settings.json-backed config (schema in package.json)
     ├── navigation/navigation.ts
     ├── terminal/{terminalProvider,panel,panelHtml}.ts
-    └── webview/{panel,settings}.ts  (bundled entries)
+    └── webview/panel.ts                     bundled webview entry (the Agents panel)
 ```
 
 ## 7. Build & test
@@ -133,7 +135,7 @@ These are the known gaps not yet implemented. The **Hover preview** item that wa
 | # | Follow-up | Status | Complexity | Files to touch |
 |---|---|---|---|---|
 | F1 | Agent-dropdown hover tooltips | **done** | low | `src/webview/panel.ts`, `src/terminal/panel.ts`, `src/terminal/panelHtml.ts` |
-| F2 | Custom tools CRUD in Settings UI | **done** | medium | `src/settings/settingsView.ts`, `src/webview/settings.ts`, `src/settings/settings.ts` |
+| F2 | Custom tools via `yolo.agents` (schema-only, no UI) | **done** | medium | `src/settings/settings.ts`, `src/agents/catalog.ts` |
 | F3 | Cross-file / scoped member resolution | **done** | medium | `src/navigation/navigation.ts` |
 | F4 | Windows PTY / shell preference | **done** | medium | `src/terminal/shell.ts`, `src/terminal/terminalProvider.ts`, `src/agents/agentDetector.ts`, `src/settings/settings.ts`, `package.json` |
 
@@ -146,17 +148,15 @@ The host now enriches each `AgentOption` with `resolvedPath` (from `resolvePath(
 name plus a secondary line of the resolved command, and carries a `title` tooltip with the absolute
 path + full command. Missing tools (`resolvedPath` undefined) are flagged with a "missing" style.
 
-### F2 — Custom tools CRUD in the Settings UI (implemented)
+### F2 — Custom tools via `yolo.agents` (implemented, schema-only)
 
-`src/webview/settings.ts` now renders a **Custom tools** section: add/edit/remove cards with
-`displayName` / `command` / `iconFile`, a per-row delete button, and an inline "✓ installed / ⚠ not
-found on PATH" badge. On every command edit the webview posts `{type:"validate", commands}`; the host
-(`settingsView.ts`) resolves each via `resolvePath()` and replies `{type:"validateResult", results}`,
-and the webview patches only the badges (input focus preserved). Save posts `customTools` (persisted via
-the new `settings.setCustomTools()` → `yolo.agents`). Because the panel subscribes to
-`yolo.*` configuration changes, the launch dropdown refreshes automatically when a custom tool is added
-or removed — no restart needed. Skip flag + base args for custom tools are still edited in the
-per-agent permission table (keyed by the tool's id).
+Custom agents are configured directly in **VS Code Settings** as entries in the `yolo.agents` array
+(`command` not present in the built-in catalog → treated as a custom tool). `settings.getCustomTools()`
+reads `yolo.agents` and `src/agents/catalog.ts` (`normalizeCustomTools`) merges them into the launch
+dropdown, so adding/removing an entry refreshes the panel automatically on the next open — no UI, no
+restart. The former **Custom tools** section of the removed Settings webview is gone; `displayName` /
+`command` / `iconFile` / `skipFlag` / `baseArgs` / `resumeFlag` are now all edited inline in
+`yolo.agents`.
 
 ### F3 — Cross-file / scoped member resolution (implemented)
 
