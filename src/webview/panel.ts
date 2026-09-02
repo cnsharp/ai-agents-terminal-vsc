@@ -218,7 +218,6 @@ window.addEventListener("message", (ev: MessageEvent) => {
         );
       } else {
         term?.reset();
-        term?.writeln("→ launched " + msg.command);
       }
       break;
     case "hoverResult":
