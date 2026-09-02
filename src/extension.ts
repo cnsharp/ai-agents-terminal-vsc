@@ -2,7 +2,6 @@
 
 import * as vscode from "vscode";
 import { YoloViewProvider } from "./terminal/panel";
-import { YoloSettingsViewProvider } from "./settings/settingsView";
 import { initBuiltInAgents, resolveAgents } from "./agents/catalog";
 import { canExecute } from "./agents/agentDetector";
 import * as settings from "./settings/settings";
@@ -24,18 +23,9 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.window.registerWebviewViewProvider(YoloViewProvider.viewType, panel)
   );
 
-  const settingsView = new YoloSettingsViewProvider(context.extensionUri);
-  context.subscriptions.push(
-    vscode.window.registerWebviewViewProvider(YoloSettingsViewProvider.viewType, settingsView)
-  );
-
   // Open Agents Panel: focus the docked view (creates it on first use).
   context.subscriptions.push(
     vscode.commands.registerCommand("yolo.openPanel", () => panel.reveal())
-  );
-  // Open Settings: reveal the settings view.
-  context.subscriptions.push(
-    vscode.commands.registerCommand("yolo.openSettings", () => settingsView.reveal())
   );
 }
 

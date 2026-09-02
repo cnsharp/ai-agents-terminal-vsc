@@ -13,7 +13,6 @@
   ],
   "activationEvents": [
     "onView:yolo.panel",
-    "onView:yolo.settings",
     "onCommand:yolo.openPanel"
   ],
   "main": "./out/extension.js",
@@ -24,12 +23,6 @@
         "title": "YOLO: Open Agents Panel",
         "category": "YOLO",
         "icon": "$(y)"
-      },
-      {
-        "command": "yolo.openSettings",
-        "title": "YOLO: Open Settings",
-        "category": "YOLO",
-        "icon": "$(gear)"
       }
     ],
     "viewsContainers": {
@@ -47,11 +40,6 @@
           "type": "webview",
           "id": "yolo.panel",
           "name": "AI Agents"
-        },
-        {
-          "type": "webview",
-          "id": "yolo.settings",
-          "name": "Settings"
         }
       ]
     },
@@ -151,7 +139,7 @@
     "build": "npm run compile && npm run build:webview",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "build:webview": "esbuild src/webview/panel.ts src/webview/settings.ts --bundle --outdir=media/dist --loader:.css=css --sourcemap",
+    "build:webview": "esbuild src/webview/panel.ts --bundle --outdir=media/dist --loader:.css=css --sourcemap",
     "watch:webview": "npm run build:webview -- --watch",
     "test": "node --test"
   },
