@@ -107,7 +107,7 @@ export const TYPE_NAME_MATCHER: MatcherDef = {
 export const MEMBER_REF_MATCHER: MatcherDef = {
   kind: "member",
   regex:
-    /(?<class>(?<![.\w/\\])(?:\??(?:[A-Za-z_][A-Za-z0-9_]*)(?:(?:\.|::|\\)[A-Za-z_][A-Za-z0-9_]*)+)|[A-Z][a-zA-Z0-9_]*)[.#](?<member>(?<![.\w])[A-Za-z_]\w*)/,
+    /(?<class>(?<![.\w/\\])(?:\??(?:[A-Za-z_][A-Za-z0-9_]*)(?:(?:\.|::|\\)[A-Za-z_][A-Za-z0-9_]*)+)|[A-Z][a-zA-Z0-9_]*)[.#](?<member>[A-Za-z_]\w*)/,
   named: ["class", "member"],
 };
 

@@ -60,47 +60,67 @@ export async function openFileAt(
 }
 
 /**
+ * Symbol kinds that represent a type (vs. a method/field of the same name). When a name resolves to
+ * several symbols, preferring these avoids landing on an unrelated method/property that happens to
+ * share the name.
+ */
+const TYPE_KINDS = new Set<vscode.SymbolKind>([
+  vscode.SymbolKind.Class,
+  vscode.SymbolKind.Interface,
+  vscode.SymbolKind.Struct,
+  vscode.SymbolKind.Enum,
+  vscode.SymbolKind.Module,
+  vscode.SymbolKind.Namespace,
+  vscode.SymbolKind.File,
+]);
+
+/**
  * Resolve a (possibly qualified) type name to a file location via the workspace symbol provider.
- * Returns the first symbol whose name matches; null if nothing matches. Language-agnostic.
+ * Language-agnostic. A name like `com.example.FooService` is searched by its simple segment
+ * (`FooService`) for recall, then the best match is chosen: exact (qualified) name in the active
+ * document, exact name anywhere, simple name in the active document, simple name anywhere — each
+ * preferring type-like symbols so a file with multiple classes resolves to the right one.
  */
 export async function resolveType(
   name: string
 ): Promise<vscode.SymbolInformation | undefined> {
   const normalized = name.replace(/\\/g, ".").replace(/::/g, ".");
-  const lastSeg = name.split(/[.\\:]/).pop() ?? name;
+  const lastSeg = normalized.split(/[.\\:]/).pop() ?? normalized;
+  const query = lastSeg || normalized;
 
   const symbols = await vscode.commands.executeCommand<vscode.SymbolInformation[]>(
     "vscode.executeWorkspaceSymbolProvider",
-    normalized
+    query
   );
+  if (!symbols || symbols.length === 0) {
+    return undefined;
+  }
 
   const activeUri = vscode.window.activeTextEditor?.document.uri.toString();
+  const isExact = (s: vscode.SymbolInformation) =>
+    s.name === name || s.name.replace(/\\/g, ".").replace(/::/g, ".") === normalized;
+  const isSimple = (s: vscode.SymbolInformation) => s.name === lastSeg;
 
-  // Tier 1: exact (qualified) match in the active document.
-  // Tier 2: exact (qualified) match anywhere.
-  // Tier 3: simple-name (last segment) match in the active document.
-  // Tier 4: simple-name match anywhere.
-  let bySimpleInActive: vscode.SymbolInformation | undefined;
-  let bySimple: vscode.SymbolInformation | undefined;
-  for (const s of symbols ?? []) {
-    const symName = s.name;
-    const uri = s.location?.uri.toString();
-    const exact = symName === name || symName.replace(/\\/g, ".").replace(/::/g, ".") === normalized;
-    if (exact && uri === activeUri) {
-      return s;
+  // Within a tier, prefer a type-like kind, then the active document, then the first candidate.
+  const pick = (pred: (s: vscode.SymbolInformation) => boolean): vscode.SymbolInformation | undefined => {
+    const matches = symbols!.filter((s) => pred(s) && s.location);
+    if (matches.length === 0) {
+      return undefined;
     }
-    if (exact) {
-      return s;
-    }
-    if (symName === lastSeg) {
-      if (uri === activeUri && !bySimpleInActive) {
-        bySimpleInActive = s;
-      } else if (!bySimple) {
-        bySimple = s;
-      }
-    }
-  }
-  return bySimpleInActive ?? bySimple;
+    return (
+      matches.find((s) => TYPE_KINDS.has(s.kind) && s.location!.uri.toString() === activeUri) ??
+      matches.find((s) => TYPE_KINDS.has(s.kind)) ??
+      matches.find((s) => s.location!.uri.toString() === activeUri) ??
+      matches[0]
+    );
+  };
+
+  return (
+    pick((s) => isExact(s) && s.location!.uri.toString() === activeUri) ??
+    pick(isExact) ??
+    pick((s) => isSimple(s) && s.location!.uri.toString() === activeUri) ??
+    pick(isSimple)
+  );
 }
 
 /**
