@@ -7,8 +7,39 @@
 //  - resolveMember  -> narrowed workspace symbol lookup; same mechanism, filtered to the same file as
 //                       the class when possible.
 
+import * as fs from "fs";
+import * as os from "os";
+import * as path from "path";
 import * as vscode from "vscode";
 import type { LinkPayload } from "../links/linkParser";
+
+/**
+ * Resolve a link's path to an absolute filesystem path. Absolute paths pass through unchanged;
+ * relative paths (as printed by agents in a terminal) are resolved against the workspace folder(s)
+ * first and then the home directory, picking the first candidate that actually exists on disk. This
+ * is what makes project-relative references like `src/foo.ts:12` openable.
+ */
+function resolveFilePath(rawPath: string): string {
+  if (path.isAbsolute(rawPath)) {
+    return rawPath;
+  }
+  const bases = [
+    ...(vscode.workspace.workspaceFolders?.map((f) => f.uri.fsPath) ?? []),
+    os.homedir(),
+  ];
+  for (const base of bases) {
+    const candidate = path.join(base, rawPath);
+    try {
+      if (fs.existsSync(candidate)) {
+        return candidate;
+      }
+    } catch {
+      // ignore unreadable candidates and keep trying other bases
+    }
+  }
+  // No existing match: best-effort resolve against the first known base.
+  return path.join(bases[0] ?? process.cwd(), rawPath);
+}
 
 /** Open a file in the editor at the given 1-based line/column (converted to 0-based internally). */
 export async function openFileAt(
@@ -16,7 +47,7 @@ export async function openFileAt(
   line?: number,
   column?: number
 ): Promise<void> {
-  const uri = vscode.Uri.file(fsPath);
+  const uri = vscode.Uri.file(resolveFilePath(fsPath));
   const position = new vscode.Position(
     Math.max(0, (line ?? 1) - 1),
     Math.max(0, (column ?? 1) - 1)
