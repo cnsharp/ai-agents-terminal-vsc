@@ -186,6 +186,11 @@ export class YoloViewProvider implements vscode.WebviewViewProvider {
       case "setResume":
         settings.setResumeMode(Boolean(msg.resume));
         break;
+      case "setLastAgent":
+        if (typeof msg.agentId === "string" && msg.agentId.length > 0) {
+          settings.setLastAgentId(msg.agentId);
+        }
+        break;
       case "openSettings":
         void vscode.commands.executeCommand("workbench.action.openSettings", "yolo");
         break;

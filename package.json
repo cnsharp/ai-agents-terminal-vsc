@@ -163,6 +163,11 @@
           "default": false,
           "markdownDescription": "Resume mode: launch agents with their `resumeFlag` to continue the most recent session. Toggle it from the `$(history)` button in the panel or `Ctrl/Cmd+Alt+R`."
         },
+        "yolo.lastAgentId": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Internal: the `id` of the agent last selected/launched, so the panel can pre-select it next time it opens. Set automatically — you normally don't edit this."
+        },
         "yolo.agentResumeFlags": {
           "type": "object",
           "additionalProperties": {

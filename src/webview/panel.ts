@@ -50,6 +50,7 @@ interface InitMessage {
   skipIcons?: SkipIconSet;
   resumeIcons?: SkipIconSet;
   cwd: string;
+  lastAgentId?: string;
 }
 
 type HostMessage =
@@ -168,6 +169,8 @@ function selectAgent(id: string): void {
   if (menu) {
     menu.hidden = true;
   }
+  // Remember this selection so it is pre-selected next time the panel opens, even before a launch.
+  vscode.postMessage({ type: "setLastAgent", agentId: id });
   renderAgentMenu();
 }
 
@@ -186,8 +189,13 @@ window.addEventListener("message", (ev: MessageEvent) => {
       matchers = msg.matchers;
       agents = msg.agents || [];
       renderAgentMenu();
+      // Pre-select the last-used agent (remembered across opens) if it's still installed; otherwise
+      // fall back to the first installed agent. Only set if nothing is selected yet.
       if (!selectedAgentId) {
-        const firstInstalled = agents.find((a) => a.resolvedPath);
+        const remembered = msg.lastAgentId
+          ? agents.find((a) => a.id === msg.lastAgentId && a.resolvedPath)
+          : undefined;
+        const firstInstalled = remembered ?? agents.find((a) => a.resolvedPath);
         if (firstInstalled) {
           selectAgent(firstInstalled.id);
         }
