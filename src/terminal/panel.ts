@@ -209,7 +209,7 @@ export class YoloViewProvider implements vscode.WebviewViewProvider {
     this.view?.webview.postMessage({ type: "hoverResult", reqId: msg.reqId, text });
   }
 
-  private launch(msg: { agentId: string; skip: boolean; resume?: boolean; baseArgs?: string }): void {
+  private launch(msg: { agentId: string; skip: boolean; resume?: boolean; baseArgs?: string; cols?: number; rows?: number }): void {
     this.disposePty();
     const def = resolveAgents().find((a) => a.id === msg.agentId);
     if (!def) {
@@ -253,7 +253,7 @@ export class YoloViewProvider implements vscode.WebviewViewProvider {
 
     let backend: SpawnBackend;
     try {
-      const result = spawnAgent({ command: def.command, args, cwd: defaultCwd(), env, preferPosix });
+      const result = spawnAgent({ command: def.command, args, cwd: defaultCwd(), env, preferPosix, cols: msg.cols, rows: msg.rows });
       this.pty = result.pty;
       backend = result.backend;
     } catch (e) {

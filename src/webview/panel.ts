@@ -218,6 +218,9 @@ window.addEventListener("message", (ev: MessageEvent) => {
         );
       } else {
         term?.reset();
+        // Grab keyboard focus so the user can type into the agent immediately after launch (a real
+        // terminal does this). Without it, arrow/Enter keystrokes are lost until the user clicks in.
+        term?.focus();
       }
       break;
     case "hoverResult":
@@ -245,7 +248,17 @@ document.addEventListener("click", (e) => {
 });
 
 document.getElementById("launch")?.addEventListener("click", () => {
-  vscode.postMessage({ type: "launch", agentId: selectedAgentId, skip: skipEnabled, resume: resumeEnabled });
+  // Send the xterm's *actual* dimensions so the host spawns the PTY at the same size the canvas
+  // displays. Without this the PTY defaults to 80x30 while the xterm is the (smaller) panel size,
+  // and a size mismatch makes TUIs like codebuddy's session picker mis-render / re-list.
+  vscode.postMessage({
+    type: "launch",
+    agentId: selectedAgentId,
+    skip: skipEnabled,
+    resume: resumeEnabled,
+    cols: term?.cols,
+    rows: term?.rows,
+  });
 });
 
 document.getElementById("skipToggle")?.addEventListener("click", () => {
