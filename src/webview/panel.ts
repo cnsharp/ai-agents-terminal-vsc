@@ -308,8 +308,10 @@ function readVscodeColor(name: string): string | undefined {
 }
 
 function buildTerminalTheme(): ITheme {
+  // Prefer the activity-bar / side-bar background so the embedded terminal blends into the panel's
+  // surrounding theme instead of painting a (different-shade) editor background over it.
   const bg =
-    readVscodeColor("--vscode-terminal-background") ??
+    readVscodeColor("--vscode-sideBar-background") ??
     readVscodeColor("--vscode-editor-background") ??
     "#1e1e1e";
   const fg =
@@ -337,7 +339,8 @@ function applyTheme(): void {
   term.options.theme = buildTerminalTheme();
   const wrap = document.getElementById("terminal");
   if (wrap) {
-    wrap.style.background = readVscodeColor("--vscode-editor-background") ?? "";
+    wrap.style.background =
+      readVscodeColor("--vscode-sideBar-background") ?? readVscodeColor("--vscode-editor-background") ?? "";
   }
 }
 

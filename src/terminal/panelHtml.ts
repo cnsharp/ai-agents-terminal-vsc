@@ -17,7 +17,7 @@ export function renderPanelHtml(
   <link href="${styleUri}" rel="stylesheet" />
   <title>YOLO — AI Agents</title>
   <style>
-    html, body { margin: 0; padding: 0; height: 100%; background: var(--vscode-editor-background); color: var(--vscode-foreground); font-family: var(--vscode-font-family); }
+    html, body { margin: 0; padding: 0; height: 100%; background: var(--vscode-sideBar-background); color: var(--vscode-foreground); font-family: var(--vscode-font-family); }
     #bar { display: flex; gap: 8px; align-items: center; padding: 6px 8px; background: var(--vscode-sideBar-background); border-bottom: 1px solid var(--vscode-panel-border); }
     #bar button { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: 1px solid var(--vscode-panel-border); padding: 3px 6px; border-radius: 3px; }
     #bar .yolo-toggle { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 24px; padding: 0; cursor: pointer; background: transparent; }
