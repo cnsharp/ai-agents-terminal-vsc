@@ -34,6 +34,7 @@ export function renderPanelHtml(
     body.vscode-dark .yolo-toggle.active .ic-on-dark,
     body.vscode-high-contrast .yolo-toggle.active .ic-on-dark { display: inline-block; }
     #bar button:hover { background: var(--vscode-button-secondaryHoverBackground); }
+    #bar #settings { width: 28px; height: 24px; padding: 0; font-size: 14px; line-height: 1; display: inline-flex; align-items: center; justify-content: center; }
     .agent-pick { position: relative; display: inline-block; }
     .agent-btn { min-width: 140px; text-align: left; }
     .agent-menu { position: absolute; z-index: 50; top: 100%; left: 0; margin-top: 2px; min-width: 260px; max-height: 320px; overflow-y: auto; background: var(--vscode-dropdown-background, var(--vscode-editor-background)); color: var(--vscode-dropdown-foreground, var(--vscode-foreground)); border: 1px solid var(--vscode-dropdown-border, var(--vscode-panel-border)); border-radius: 4px; box-shadow: 0 2px 10px rgba(0,0,0,0.4); padding: 4px; }
@@ -71,6 +72,7 @@ export function renderPanelHtml(
     <button id="skipToggle" class="yolo-toggle" type="button" aria-pressed="false" title="Skip permissions (YOLO)"></button>
     <button id="resumeToggle" class="yolo-toggle" type="button" aria-pressed="false" title="Resume last session"></button>
     <button id="launch">Launch</button>
+    <button id="settings" style="margin-left:auto" type="button" title="Open YOLO settings" aria-label="Open YOLO settings">⚙</button>
   </div>
   <div id="terminal"></div>
   <script src="${scriptUri}"></script>

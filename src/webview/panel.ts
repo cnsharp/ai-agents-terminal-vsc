@@ -262,6 +262,10 @@ document.getElementById("resumeToggle")?.addEventListener("click", () => {
   vscode.postMessage({ type: "setResume", resume: resumeEnabled });
 });
 
+document.getElementById("settings")?.addEventListener("click", () => {
+  vscode.postMessage({ type: "openSettings" });
+});
+
 // Tell the host we're ready to receive the agent list + matchers. This MUST happen before any
 // terminal work that could throw.
 vscode.postMessage({ type: "ready" });
