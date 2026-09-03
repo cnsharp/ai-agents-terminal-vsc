@@ -22,6 +22,10 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(YoloViewProvider.viewType, panel)
   );
+  // Kill the running PTY on extension deactivation so the agent process isn't orphaned. The session is
+  // intentionally kept alive across view hide/move (re-attached, not disposed); only full deactivation
+  // tears it down.
+  context.subscriptions.push(vscode.Disposable.from(panel));
 
   // Open Agents Panel: focus the docked view (creates it on first use).
   context.subscriptions.push(

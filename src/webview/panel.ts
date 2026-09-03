@@ -56,7 +56,7 @@ interface InitMessage {
 type HostMessage =
   | InitMessage
   | { type: "data"; data: string }
-  | { type: "spawned"; command: string; backend?: "embedded" | "vscode-terminal" }
+  | { type: "spawned"; command: string; backend?: "embedded" | "vscode-terminal"; replay?: string }
   | { type: "hoverResult"; reqId: number; text?: string };
 
 interface LinkPayload {
@@ -226,6 +226,19 @@ window.addEventListener("message", (ev: MessageEvent) => {
         );
       } else {
         term?.reset();
+        // On re-attach (view was hidden/moved and recreated) the new xterm is blank. Replay the buffered
+        // PTY output so the session's screen is restored immediately, then re-sync size to force a live
+        // redraw from the agent.
+        if (term && msg.replay) {
+          term.write(msg.replay);
+        }
+        if (term && term.cols > 0 && term.rows > 0) {
+          // Toggle the size (+1/-1) so the running TUI repaints even when the panel size is unchanged:
+          // a plain resize to identical dimensions emits no SIGWINCH, which would leave a re-attached
+          // terminal blank. The transient off-by-one is harmless.
+          vscode.postMessage({ type: "resize", cols: term.cols, rows: term.rows + 1 });
+          vscode.postMessage({ type: "resize", cols: term.cols, rows: term.rows });
+        }
         // Grab keyboard focus so the user can type into the agent immediately after launch (a real
         // terminal does this). Without it, arrow/Enter keystrokes are lost until the user clicks in.
         term?.focus();
@@ -477,6 +490,13 @@ function initTerminal(): void {
   });
   t.onResize(({ cols, rows }) => vscode.postMessage({ type: "resize", cols, rows }));
   window.addEventListener("resize", () => fit.fit());
+  // When the panel is hidden and reshown (retainContextWhenHidden keeps the context alive), re-fit so
+  // the terminal matches the panel's current size — the layout may have changed while it was hidden.
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+      fit.fit();
+    }
+  });
 
   // Re-theme xterm when the user switches VS Code color themes. VS Code rewrites the theme CSS
   // variables on `body` (and sometimes `:root`) when the theme changes, so watch both.

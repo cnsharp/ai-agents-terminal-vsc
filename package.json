@@ -39,7 +39,8 @@
         {
           "type": "webview",
           "id": "yolo.panel",
-          "name": "AI Agents"
+          "name": "AI Agents",
+          "retainContextWhenHidden": true
         }
       ]
     },

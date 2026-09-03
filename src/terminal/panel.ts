@@ -33,6 +33,13 @@ export class YoloViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = "yolo.panel";
   private pty: YoloPty | undefined;
   private view: vscode.WebviewView | undefined;
+  /** Rolling buffer of PTY output since launch, replayed into a re-created webview so the session's
+   *  screen is restored after the view is disposed/recreated (toggle side bar, move panel, …). */
+  private ptyOut = "";
+  private static readonly PTY_OUT_CAP = 256 * 1024;
+  /** Backend + command of the session currently hosted by `pty`, so a re-created webview can re-attach. */
+  private backend: SpawnBackend | undefined;
+  private lastCommand = "";
 
   constructor(private readonly extensionUri: vscode.Uri) {
     // When any yolo.* setting changes (e.g. custom tools edited in Settings), re-scan installs and
@@ -61,11 +68,21 @@ export class YoloViewProvider implements vscode.WebviewViewProvider {
     };
     view.webview.html = this.html();
     view.webview.onDidReceiveMessage((msg) => this.onMessage(msg));
-    view.onDidDispose(() => this.disposePty());
+    // Detach only — keep the running PTY alive across view hide/dispose so the session survives. The
+    // new webview re-attaches to the existing PTY in the `ready` handler. (We dispose the PTY only on a
+    // fresh launch or extension deactivation.)
+    view.onDidDispose(() => {
+      this.view = undefined;
+    });
     // Push the initial state immediately (do not wait for the webview's `ready` round-trip — that
     // handshake can be lost on fast reloads, leaving the agent list empty). The webview also re-requests
     // via `ready`, which re-sends this, so a double delivery is harmless.
     this.sendInit();
+  }
+
+  /** Kill the running PTY (called on extension deactivation to avoid orphaned agent processes). */
+  public dispose(): void {
+    this.disposePty();
   }
 
   public reveal(): void {
@@ -170,12 +187,27 @@ export class YoloViewProvider implements vscode.WebviewViewProvider {
     switch (msg?.type) {
       case "ready":
         this.sendInit();
+        // If a session is already running (the view was hidden / moved / re-created), re-attach the new
+        // webview to the existing PTY instead of losing the session. The webview's `spawned` handler sets
+        // `backend = embedded`, resets the fresh xterm, and replays the buffered output.
+        if (this.pty) {
+          this.view?.webview.postMessage({
+            type: "spawned",
+            command: this.lastCommand,
+            backend: this.backend,
+            replay: this.ptyOut,
+          });
+        }
         break;
       case "input":
         this.pty?.write(msg.data);
         break;
       case "resize":
-        this.pty?.resize(msg.cols, msg.rows);
+        try {
+          this.pty?.resize(msg.cols, msg.rows);
+        } catch {
+          /* terminal may not be ready for an intermediate size */
+        }
         break;
       case "launch":
         this.launch(msg);
@@ -261,11 +293,18 @@ export class YoloViewProvider implements vscode.WebviewViewProvider {
       const result = spawnAgent({ command: def.command, args, cwd: defaultCwd(), env, preferPosix, cols: msg.cols, rows: msg.rows });
       this.pty = result.pty;
       backend = result.backend;
+      this.backend = backend;
+      this.lastCommand = def.command;
     } catch (e) {
       vscode.window.showErrorMessage(e instanceof Error ? e.message : String(e));
       return;
     }
     this.pty.onData((data) => {
+      // Keep a rolling buffer so a re-created webview can replay the screen (see `replay` on `spawned`).
+      this.ptyOut += data;
+      if (this.ptyOut.length > YoloViewProvider.PTY_OUT_CAP) {
+        this.ptyOut = this.ptyOut.slice(-YoloViewProvider.PTY_OUT_CAP);
+      }
       this.view?.webview.postMessage({ type: "data", data });
     });
     this.view?.webview.postMessage({ type: "spawned", command: def.command, backend });
@@ -309,5 +348,8 @@ export class YoloViewProvider implements vscode.WebviewViewProvider {
   private disposePty(): void {
     this.pty?.kill();
     this.pty = undefined;
+    this.backend = undefined;
+    this.lastCommand = "";
+    this.ptyOut = "";
   }
 }
