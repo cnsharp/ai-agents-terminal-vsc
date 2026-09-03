@@ -432,6 +432,10 @@ function initTerminal(): void {
     fontSize: 13,
     cursorBlink: true,
     theme: buildTerminalTheme(),
+    // Match VS Code's integrated terminal, which uses Unicode 11. Without this, TUI logos/banners that
+    // rely on newer glyphs (box-drawing, special symbols, emoji) render blank or garbled — making the
+    // logo appear "missing" compared to the native terminal.
+    unicode: { version: 11 },
   });
   const fit = new FitAddon();
   t.loadAddon(fit);
