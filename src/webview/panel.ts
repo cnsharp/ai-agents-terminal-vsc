@@ -532,7 +532,10 @@ function cellXForCharIndex(line: IBufferLine, charIndex: number): number {
 
   t.registerLinkProvider({
     provideLinks: (bufferLineNumber, callback) => {
-      const line = t.buffer.active.getLine(bufferLineNumber);
+      // xterm passes `bufferLineNumber` 1-based, but `getLine()` is 0-based (it forwards straight to
+      // the buffer's `lines` array). Without the -1 we read the NEXT line, so each row's links would
+      // belong to the row below it and the last row would read past the buffer and get none.
+      const line = t.buffer.active.getLine(bufferLineNumber - 1);
       if (!line) {
         callback([]);
         return;
