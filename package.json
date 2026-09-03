@@ -163,6 +163,14 @@
           "default": false,
           "markdownDescription": "Resume mode: launch agents with their `resumeFlag` to continue the most recent session. Toggle it from the `$(history)` button in the panel or `Ctrl/Cmd+Alt+R`."
         },
+        "yolo.agentResumeFlags": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {},
+          "markdownDescription": "Per-agent override of the resume flag used when Resume mode is on, keyed by agent `command` or `id`. Takes precedence over the built-in `resumeFlag` in agents.json / `yolo.agents`. Use this to tune resume behaviour per agent (e.g. choose between an interactive session picker and resuming the latest automatically) without editing agents.json. Example:\n```json\n\"yolo.agentResumeFlags\": {\n  \"codebuddy\": \"-r\",\n  \"claude\": \"--resume\"\n}\n```\nWhen an agent is absent here, its `resumeFlag` from agents.json (or `yolo.agents`) is used."
+        },
         "yolo.agentBaseArgs": {
           "type": "object",
           "default": {},

@@ -97,13 +97,17 @@ export function resolveAgents(): AgentDef[] {
     seen.command.add(cfg.command);
     seen.name.add(name);
     seen.id.add(id);
+    // Per-agent resume-flag override from `yolo.agentResumeFlags` (keyed by id or command), falling
+    // back to the agent's own `resumeFlag` (from agents.json / `yolo.agents`).
+    const resumeOverrides = settings.getAgentResumeFlags();
+    const resumeFlag = resumeOverrides[id] ?? resumeOverrides[cfg.command] ?? cfg.resumeFlag;
     agents.push({
       id,
       command: cfg.command,
       displayName: name,
       baseArgs: cfg.baseArgs ?? "",
       skipFlag: cfg.skipFlag,
-      resumeFlag: cfg.resumeFlag,
+      resumeFlag,
       iconFile: cfg.iconFile,
     });
   };

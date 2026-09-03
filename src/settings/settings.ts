@@ -42,6 +42,17 @@ export function getResumeMode(): boolean {
   return cfg().get<boolean>("resumeMode", false);
 }
 
+/**
+ * Per-agent override of the resume flag (the flag appended when Resume mode is on). Keyed by agent
+ * `command` or `id`. Takes precedence over the built-in value in agents.json / `yolo.agents`, so a
+ * user can tune resume behaviour per agent without editing agents.json. Example:
+ *   "yolo.agentResumeFlags": { "codebuddy": "-r", "claude": "--resume" }
+ * When an agent is absent here, its `resumeFlag` from agents.json (or `yolo.agents`) is used.
+ */
+export function getAgentResumeFlags(): Record<string, string> {
+  return cfg().get<Record<string, string>>("agentResumeFlags", {});
+}
+
 export function setResumeMode(value: boolean): void {
   cfg().update("resumeMode", value, vscode.ConfigurationTarget.Global);
 }

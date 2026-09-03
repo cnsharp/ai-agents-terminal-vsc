@@ -31,8 +31,8 @@
     "displayName": "CodeBuddy",
     "command": "codebuddy",
     "baseArgs": "",
-    "skipFlag": "--permission-mode bypassPermissions",
-    "resumeFlag": "--continue",
+    "skipFlag": "-y",
+    "resumeFlag": "-r",
     "iconFile": "codebuddy.png"
   },
   {
