@@ -88,10 +88,9 @@ export async function resolveType(
   const lastSeg = normalized.split(/[.\\:]/).pop() ?? normalized;
   const query = lastSeg || normalized;
 
-  const symbols = await vscode.commands.executeCommand<vscode.SymbolInformation[]>(
-    "vscode.executeWorkspaceSymbolProvider",
-    query
-  );
+  const symbols = await Promise.resolve(
+    vscode.commands.executeCommand<vscode.SymbolInformation[]>("vscode.executeWorkspaceSymbolProvider", query)
+  ).catch(() => undefined);
   if (!symbols || symbols.length === 0) {
     return undefined;
   }
@@ -153,10 +152,9 @@ async function memberInClassFile(
   classRange: vscode.Range,
   member: string
 ): Promise<vscode.SymbolInformation | undefined> {
-  const docSyms = await vscode.commands.executeCommand<vscode.DocumentSymbol[]>(
-    "vscode.executeDocumentSymbolProvider",
-    uri
-  );
+  const docSyms = await Promise.resolve(
+    vscode.commands.executeCommand<vscode.DocumentSymbol[]>("vscode.executeDocumentSymbolProvider", uri)
+  ).catch(() => undefined);
   const classNode = findEnclosing(docSyms ?? [], classRange);
   const descendants = classNode ? classNode.children : (docSyms ?? []);
   for (const s of descendants) {
@@ -177,10 +175,9 @@ async function memberByWorkspace(
   member: string,
   classUri: vscode.Uri | undefined
 ): Promise<vscode.SymbolInformation | undefined> {
-  const symbols = await vscode.commands.executeCommand<vscode.SymbolInformation[]>(
-    "vscode.executeWorkspaceSymbolProvider",
-    member
-  );
+  const symbols = await Promise.resolve(
+    vscode.commands.executeCommand<vscode.SymbolInformation[]>("vscode.executeWorkspaceSymbolProvider", member)
+  ).catch(() => undefined);
   let fallback: vscode.SymbolInformation | undefined;
   for (const s of symbols ?? []) {
     if (s.name !== member) {

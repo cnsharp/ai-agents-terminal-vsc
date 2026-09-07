@@ -11,6 +11,7 @@ import { Terminal, type IBufferLine, type ILink, type ITheme, type Terminal as I
 import { FitAddon } from "xterm-addon-fit";
 import "xterm/css/xterm.css";
 import { Regexes } from "../constants/regexes";
+import { PROGRAMMING_EXT } from "../links/linkPatterns";
 
 declare const acquireVsCodeApi: () => {
   postMessage(msg: unknown): void;
@@ -574,6 +575,36 @@ function looksLikeSoftWrapOrigin(text: string): boolean {
 }
 
 /**
+ * True for an indented single identifier token that continues a wrapped name mid-word, e.g.
+ * "  isonPatternGenerator" finishing "com.cnsharp…EnumCompar". Used to stitch type/member names that
+ * wrap across rows with no separator between the fragments. (A bare word like "  TODO" also matches,
+ * but gluing it is harmless — provideLinks() never links plain prose.)
+ */
+function isSoftIdentifierContinuation(lineText: string): boolean {
+  return /^[ \t]*[A-Za-z_$][A-Za-z0-9_$]*$/.test(lineText);
+}
+
+/**
+ * True when the text reads as a type/member name that continues on the next row: it holds a qualified
+ * name (dot-separated identifiers). A bare CamelCase word like "SomeNote" is deliberately excluded so
+ * prose is never mistaken for an origin.
+ */
+function looksLikeSoftTypeNameOrigin(text: string): boolean {
+  const t = text.replace(Regexes.DECORATIVE_PREFIX, "").trimEnd();
+  return /[A-Za-z_$][A-Za-z0-9_$]*\.[A-Za-z_$][A-Za-z0-9_$]*/.test(t);
+}
+
+/** Combined continuation/origin checks that also recognise wrapped type/member names. */
+const isSoftContinuation = (line: string): boolean =>
+  isSoftPathContinuation(line) || isSoftIdentifierContinuation(line);
+// Only a *real* file extension (not any ".word") should block a type origin — otherwise a name like
+// "EnumCompar" (which ends in ".Compar") would be mistaken for a complete file reference.
+const FILE_EXT_RE = new RegExp(`\\.(?:${PROGRAMMING_EXT})$`);
+const isSoftOrigin = (text: string): boolean =>
+  looksLikeSoftWrapOrigin(text) ||
+  (looksLikeSoftTypeNameOrigin(text) && !FILE_EXT_RE.test(text.trimEnd()));
+
+/**
  * Convert a string (character) index within a buffer line into a 1-based CELL column. xterm link
  * ranges are cell-based, but a regex match index is a character index — and wide glyphs (CJK, etc.)
  * occupy two cells. Without this conversion, every link that follows a wide character is placed at the
@@ -650,19 +681,23 @@ function cellXForCharIndex(line: IBufferLine, charIndex: number): number {
       while (upIdx > 0) {
         const curLine = buffer.getLine(upIdx);
         if (!curLine || curLine.isWrapped) break;
-        if (!isSoftPathContinuation(curLine.translateToString(true))) break;
+        if (!isSoftContinuation(curLine.translateToString(true))) break;
         const prevLine = buffer.getLine(upIdx - 1);
         if (!prevLine || prevLine.isWrapped) break;
-        if (!isSoftPathContinuation(prevLine.translateToString(true))) {
+        if (!isSoftContinuation(prevLine.translateToString(true))) {
+          // The row above is not a continuation; if it's a genuine origin, include it and stop.
+          if (isSoftOrigin(prevLine.translateToString(true))) {
+            upIdx--;
+          }
           break;
         }
         upIdx--;
       }
-      // Keep the upward extension only when the row we landed on really opens a path — otherwise an
+      // Keep the upward extension only when the row we landed on really opens a link — otherwise an
       // unrelated line above would be glued onto the fragment.
       if (upIdx !== startIdx) {
         const first = buffer.getLine(upIdx);
-        if (first && looksLikeSoftWrapOrigin(first.translateToString(true))) {
+        if (first && isSoftOrigin(first.translateToString(true))) {
           startIdx = upIdx;
         }
       }
@@ -672,8 +707,8 @@ function cellXForCharIndex(line: IBufferLine, charIndex: number): number {
       while (true) {
         const nextLine = buffer.getLine(endIdx + 1);
         if (!nextLine || nextLine.isWrapped) break;
-        if (!isSoftPathContinuation(nextLine.translateToString(true))) break;
-        if (!looksLikeSoftWrapOrigin(joinedRange(startIdx, endIdx))) break;
+        if (!isSoftContinuation(nextLine.translateToString(true))) break;
+        if (!isSoftOrigin(joinedRange(startIdx, endIdx))) break;
         endIdx++;
       }
       // Per-segment char offset + 1-based row, so a char index in `combined` maps back to a cell.
