@@ -12,12 +12,7 @@
     "contribSecondarySidebar"
   ],
   "categories": [
-    "AI",
-    "Terminal"
-  ],
-  "activationEvents": [
-    "onView:yolo.panel",
-    "onCommand:yolo.openPanel"
+    "AI"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -41,6 +36,7 @@
     "views": {
       "yolo-agents": [
         {
+          "icon": "media/icons/panelIcon.png",
           "type": "webview",
           "id": "yolo.panel",
           "name": "AI Agents",
