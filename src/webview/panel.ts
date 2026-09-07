@@ -446,6 +446,103 @@ function provideLinks(lineText: string): Candidate[] {
 // the host replies with `hoverResult`. Keyed by reqId so stale replies are ignored.
 let hoverReqId = 0;
 let hoverState: { reqId: number; payload: LinkPayload } | undefined;
+
+/**
+ * Tracks the text the user has typed into the embedded terminal but not yet submitted, so the input
+ * box never gets linkified. This is the VS Code port of IntelliJ's `TypedInputGuard`: a PTY hands
+ * back one undifferentiated byte stream, so "is this the input box?" cannot be answered from the
+ * output side. The only reliable signal is the bytes going *to* the PTY — the user's own keystrokes
+ * and pastes — which xterm surfaces via `onData`. We accumulate those and suppress any link whose
+ * text overlaps them. Cleared on submit (Enter) or abandon (Ctrl-C / Ctrl-U / Ctrl-K).
+ */
+class TypedInputGuard {
+  private typed = "";
+
+  /** Record keystrokes/paste sent *to* the PTY by the user (called from xterm `onData`). */
+  onUserInput(input: string): void {
+    if (!input) {
+      return;
+    }
+    this.typed = this.fold(this.typed, input);
+  }
+
+  /**
+   * Ranges (char index, exclusive end) within `line` occupied by the pending typed text. Empty when
+   * nothing is pending. A multi-line input (Shift+Enter) is matched per line. If we are tracking
+   * input but cannot locate it on this line (byte-stream→buffer desync), the whole line is blanked
+   * — while typing the active line is always the input box, so suppressing it is correct.
+   */
+  spansIn(line: string): Array<[number, number]> {
+    const pending = this.typed;
+    if (!pending.trim()) {
+      return [];
+    }
+    const spans: Array<[number, number]> = [];
+    for (const seg of pending.split("\n")) {
+      if (!seg.trim()) {
+        continue;
+      }
+      let from = 0;
+      while (from <= line.length - seg.length) {
+        const at = line.indexOf(seg, from);
+        if (at < 0) {
+          break;
+        }
+        spans.push([at, at + seg.length]);
+        from = at + seg.length;
+      }
+    }
+    if (spans.length === 0 && line.length > 0) {
+      spans.push([0, line.length]);
+    }
+    return spans;
+  }
+
+  private fold(typed: string, input: string): string {
+    const ESC = "\x1b";
+    const CR = "\r";
+    const LF = "\n";
+    const BACKSPACE = "\b";
+    const DELETE = "\x7f";
+    const PASTE_START = `${ESC}[200~`;
+    const PASTE_END = `${ESC}[201~`;
+    const CLEAR_KEYS = ["\x03", "\x15", "\x0b"]; // Ctrl-C, Ctrl-U, Ctrl-K
+
+    // Enter / Return submits the input → box is empty again.
+    if (input === CR || input === LF || input === CR + LF) {
+      return "";
+    }
+    // Esc + Enter is a newline *inside* the input, not a submit.
+    if (input === ESC + CR || input === ESC + LF) {
+      return typed + LF;
+    }
+    // Bracketed paste: keep the pasted body, drop the \e[200~ / \e[201~ markers.
+    if (input.startsWith(PASTE_START)) {
+      return typed + input.slice(PASTE_START.length).split(PASTE_END)[0];
+    }
+    // Escape sequence (arrows, function keys, mouse): moves the cursor, leaves text unchanged.
+    if (input.startsWith(ESC)) {
+      return typed;
+    }
+    // Backspace / Delete erase the last character.
+    if (input === BACKSPACE || input === DELETE) {
+      return typed.slice(0, -1);
+    }
+    // Ctrl-C / Ctrl-U / Ctrl-K clear the input line.
+    if (CLEAR_KEYS.includes(input)) {
+      return "";
+    }
+    // Ordinary typing (incl. CJK and tab).
+    if (input.split("").every((ch) => ch === "\t" || (ch >= " " && ch !== DELETE))) {
+      return typed + input;
+    }
+    // Any other control byte: leave the pending text alone.
+    return typed;
+  }
+}
+
+const typedInput = new TypedInputGuard();
+
 const hoverEl = document.createElement("div");
 hoverEl.className = "xterm-hover";
 hoverEl.style.display = "none";
@@ -487,6 +584,9 @@ function initTerminal(): void {
   t.element?.appendChild(hoverEl);
 
   t.onData((d) => {
+    // Track the user's keystrokes/pastes so the input box is never linkified (IntelliJ-style
+    // TypedInputGuard). onData fires only for *user* input, not for term.write() output.
+    typedInput.onUserInput(d);
     // Only forward keystrokes when the agent is hosted in the embedded terminal. In the
     // vscode-terminal backend the user types directly in the revealed VS Code terminal; forwarding
     // here would double-type.
@@ -633,6 +733,12 @@ function cellXForCharIndex(line: IBufferLine, charIndex: number): number {
   t.registerLinkProvider({
     provideLinks: (bufferLineNumber, callback) => {
       const buffer = t.buffer.active;
+      // TUIs (interactive prompts, pickers, editors) run in the alternate screen buffer. Disable all
+      // terminal linkification there; normal agent output (normal buffer) keeps its links.
+      if (buffer.type === "alternate") {
+        callback([]);
+        return;
+      }
       // xterm passes `bufferLineNumber` 1-based, but `getLine()` is 0-based (it forwards straight to
       // the buffer's `lines` array). Without the -1 we read the NEXT line, so each row's links would
       // belong to the row below it and the last row would read past the buffer and get none.
@@ -774,8 +880,19 @@ function cellXForCharIndex(line: IBufferLine, charIndex: number): number {
       };
 
       const all = provideLinks(combined);
+      // Suppress any link whose text overlaps what the user is currently typing into the input box
+      // (state-based, mirroring IntelliJ's InputAwareLinkFilter — no timing guesswork). Typed text
+      // is tracked via xterm onData, so this catches input boxes that live in the NORMAL buffer too.
+      const typedSpans = typedInput.spansIn(combined);
       const links: ILink[] = all
         .filter((c) => {
+          if (typedSpans.length) {
+            const cs = c.start;
+            const ce = c.start + c.length;
+            if (typedSpans.some(([ss, se]) => cs < se && ss < ce)) {
+              return false;
+            }
+          }
           const s = cellForChar(c.start, false);
           const e = cellForChar(c.start + c.length, true);
           // Only surface the link on rows it actually spans (xterm calls provideLinks per row).
