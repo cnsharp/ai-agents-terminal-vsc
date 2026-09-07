@@ -72,7 +72,7 @@ no IntelliJ-style "navigate to the exact member in the same file" heuristics bey
 ### 5.3 Tool window vs WebviewView — DONE
 The IntelliJ docked, always-available tool window is implemented as a `WebviewViewProvider`
 (`yolo.panel`) in an activity-bar container, so it docks and persists while hidden. The
-`YOLO: Open Agents Panel` command focuses it. There is no separate Settings view — all configuration
+`AgentYOLO: Open Agents Panel` command focuses it. There is no separate Settings view — all configuration
 is edited directly in **VS Code Settings** (`yolo.*` in `settings.json`).
 
 ### 5.4 Link de-duplication / priority — DONE
@@ -123,7 +123,7 @@ yolo/
 npm install
 npm run build      # tsc (extension + webview entries) + esbuild (bundle webview)
 npm test           # node:test unit tests for the link engine
-# F5 in VS Code (Run Extension) -> "YOLO: Open Agents Panel"
+# F5 in VS Code (Run Extension) -> "AgentYOLO: Open Agents Panel"
 ```
 
 `vscode:prepublish` runs `npm run build`, so the packaged extension includes the bundled webview.

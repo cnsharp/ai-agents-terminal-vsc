@@ -1,6 +1,6 @@
 {
-  "name": "yolo",
-  "displayName": "YOLO — AI Agents Extender",
+  "name": "agentyolo",
+  "displayName": "Agent YOLO",
   "description": "Launch AI CLI agents (Claude Code, Codex, Cursor CLI, …) in an embedded terminal with clickable file/type links.",
   "version": "0.1.2",
   "publisher": "cnsharp",
@@ -19,8 +19,8 @@
     "commands": [
       {
         "command": "yolo.openPanel",
-        "title": "YOLO: Open Agents Panel",
-        "category": "YOLO",
+        "title": "AgentYOLO: Open Agents Panel",
+        "category": "AgentYOLO",
         "icon": "$(y)"
       }
     ],
@@ -28,7 +28,7 @@
       "secondarySidebar": [
         {
           "id": "yolo-agents",
-          "title": "YOLO",
+          "title": "AgentYOLO",
           "icon": "media/icons/panelIcon.png"
         }
       ]
@@ -45,7 +45,7 @@
       ]
     },
     "configuration": {
-      "title": "YOLO",
+      "title": "AgentYOLO",
       "properties": {
         "yolo.agents": {
           "type": "array",
