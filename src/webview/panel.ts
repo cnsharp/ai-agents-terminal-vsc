@@ -84,6 +84,15 @@ const PRIORITY: Record<string, number> = { member: 4, type: 3, file: 2, url: 1 }
 
 let matchers: SerializableMatcher[] = [];
 
+// Compiled regexes for `matchers`, built once per `init` (not per `provideLinks` call). Reusing the
+// same RegExp object across rows/calls avoids recompiling on every line of every render — which
+// otherwise multiplied with the number of visible rows and open tabs.
+interface CompiledMatcher {
+  m: SerializableMatcher;
+  re: RegExp;
+}
+let compiledMatchers: CompiledMatcher[] = [];
+
 // --- Agent picker (custom listbox; native <select> can't show the resolved path/command on hover) ---
 let agents: AgentOption[] = [];
 let selectedAgentId = "";
@@ -193,6 +202,12 @@ window.addEventListener("message", (ev: MessageEvent) => {
   switch (msg.type) {
     case "init":
       matchers = msg.matchers;
+      // Compile each matcher's regex once here; provideLinks reuses them instead of recompiling
+      // on every row of every render.
+      compiledMatchers = matchers.map((m) => ({
+        m,
+        re: new RegExp(m.source, m.flags.includes("g") ? m.flags : m.flags + "g"),
+      }));
       agents = msg.agents || [];
       renderAgentMenu();
       // Pre-select the last-used agent (remembered across opens) if it's still installed; otherwise
@@ -405,8 +420,7 @@ function buildPayload(m: SerializableMatcher, match: RegExpExecArray): LinkPaylo
  */
 function provideLinks(lineText: string): Candidate[] {
   const candidates: Candidate[] = [];
-  for (const m of matchers) {
-    const re = new RegExp(m.source, m.flags.includes("g") ? m.flags : m.flags + "g");
+  for (const { m, re } of compiledMatchers) {
     re.lastIndex = 0;
     let match: RegExpExecArray | null;
     let guard = 0;
