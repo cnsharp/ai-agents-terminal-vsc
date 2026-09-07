@@ -101,7 +101,8 @@ The global toggles are `yolo.skipEnabled` and `yolo.resumeMode`.
 yolo/
 ├── package.json            manifest: commands, views, configuration, deps, build scripts
 ├── tsconfig.json
-├── media/icon.svg
+├── media/icons/            extensionIcon.png (extension), panelIcon.png (panel "y"), skipY*/resume* toggles
+├── media/agents/           per-agent logos referenced by agents.json `iconFile`
 ├── media/dist/             esbuild output: panel.{js,css} (bundled xterm)
 ├── test/                   node:test unit tests (linkPatterns / linkParser)
 ├── README.md
