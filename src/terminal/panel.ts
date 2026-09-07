@@ -18,6 +18,7 @@ import {
 } from "../navigation/navigation";
 import type { LinkPayload } from "../links/linkParser";
 import { renderPanelHtml, webviewAssetUri } from "./panelHtml";
+import { Regexes } from "../constants/regexes";
 
 interface AgentOption {
   id: string;
@@ -263,11 +264,11 @@ export class YoloViewProvider implements vscode.WebviewViewProvider {
     settings.setLastAgentId(def.id);
 
     // Base args: the catalog's `baseArgs` first, then any per-agent override from settings.
-    const args: string[] = (def.baseArgs ?? "").split(/\s+/).filter(Boolean);
+    const args: string[] = (def.baseArgs ?? "").split(Regexes.WHITESPACE_RUN).filter(Boolean);
     const env: Record<string, string> = {};
     const extraBase = settings.getAgentBaseArgs()[def.id.toLowerCase()] ?? msg.baseArgs ?? "";
     if (extraBase.trim().length > 0) {
-      args.push(...extraBase.trim().split(/\s+/));
+      args.push(...extraBase.trim().split(Regexes.WHITESPACE_RUN));
     }
     // YOLO (skip-permissions) flag: a manual `yolo.permissionRules` entry (by command or id) overrides
     // the catalog's `skipFlag`. Whether the flag is POSIX-style decides if we prefer a POSIX shell on
@@ -279,14 +280,14 @@ export class YoloViewProvider implements vscode.WebviewViewProvider {
         .find((r) => r.agentId === def.command || r.agentId === def.id);
       const flag = rule?.flag ?? (def.skipFlag ?? "");
       if (flag) {
-        args.push(...flag.trim().split(/\s+/));
+        args.push(...flag.trim().split(Regexes.WHITESPACE_RUN));
         posixIndicator = flag;
       }
     }
     // Resume flag: continue the most recent session for this agent. Appended last so it sits on top
     // of base + YOLO args.
     if (msg.resume && def.resumeFlag) {
-      args.push(...def.resumeFlag.split(/\s+/).filter(Boolean));
+      args.push(...def.resumeFlag.split(Regexes.WHITESPACE_RUN).filter(Boolean));
     }
     const preferPosix = process.platform === "win32" && posixIndicator.trim().startsWith("-");
 

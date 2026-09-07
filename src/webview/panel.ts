@@ -10,6 +10,7 @@
 import { Terminal, type IBufferLine, type ILink, type ITheme, type Terminal as ITerminal } from "xterm";
 import { FitAddon } from "xterm-addon-fit";
 import "xterm/css/xterm.css";
+import { Regexes } from "../constants/regexes";
 
 declare const acquireVsCodeApi: () => {
   postMessage(msg: unknown): void;
@@ -509,6 +510,70 @@ function initTerminal(): void {
   themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["style"] });
 
 /**
+ * True when the buffer line looks like a soft-wrap continuation: tools that break long paths emit
+ * `  rest-of-path` on its own row (isWrapped=false). The fragment is a single token of path
+ * characters (no internal spaces) that still reads as part of a path — it holds a separator, is
+ * truncated at a hyphen, or carries a file extension / line suffix (e.g. "  per-", "  e/ke",
+ * "  /main/java/…", "  core/model/PageResult.java:31"). The token may open with a separator, since
+ * a wrap can land right before one ("…/src" + "  /main/java/…"). Bare words such as "  TODO" are
+ * rejected so indented prose is never glued onto a path.
+ */
+function isSoftPathContinuation(lineText: string): boolean {
+  // Strip any decorative token a tool prints before the path (e.g. "— /Users", "> /Users") so it
+  // doesn't mask the path fragment underneath.
+  const core = lineText.replace(Regexes.DECORATIVE_PREFIX, "");
+  // Strict form: the whole (decorative-stripped) row is a single path token — covers the lone "-"
+  // continuation and any clean fragment.
+  const strict = Regexes.SOFT_CONTINUATION.exec(core);
+  if (strict) {
+    const tok = strict[1];
+    if (
+      tok.includes("/") ||
+      tok.includes("\\") ||
+      Regexes.TRAILING_HYPHEN.test(tok) ||
+      Regexes.FILE_REF.test(tok) ||
+      Regexes.LINE_SUFFIX.test(tok)
+    ) {
+      return true;
+    }
+  }
+  // Relaxed form: a path token at the start of the row with trailing junk afterwards
+  // (e.g. "odel/PageResult.java:31 output the same"). Only accept when the token is a strong path
+  // indicator, so prose like "  - some note" is still rejected.
+  const lead = Regexes.LEADING_PATH_TOKEN.exec(core);
+  if (lead) {
+    const tok = lead[1];
+    if (
+      tok.includes("/") ||
+      tok.includes("\\") ||
+      Regexes.FILE_REF.test(tok) ||
+      Regexes.LINE_SUFFIX.test(tok)
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * True when the text reads as a path that continues on the next row: it contains a separator and
+ * ends mid-path rather than on a complete file reference (`.java`, `.java:31`, `:31`). A trailing
+ * separator counts as incomplete ("…/keeper/"), which is what lets a chain of fragments keep
+ * absorbing the rows that follow. A leading decorative token (see DECORATIVE_PREFIX) is stripped
+ * first so it doesn't suppress a genuine origin row.
+ */
+function looksLikeSoftWrapOrigin(text: string): boolean {
+  const t = text.replace(Regexes.DECORATIVE_PREFIX, "").trimEnd();
+  if (!t || !Regexes.HAS_SEPARATOR.test(t)) {
+    return false;
+  }
+  if (Regexes.FILE_REF.test(t) || Regexes.LINE_SUFFIX.test(t)) {
+    return false;
+  }
+  return Regexes.ENDS_MID_PATH.test(t);
+}
+
+/**
  * Convert a string (character) index within a buffer line into a 1-based CELL column. xterm link
  * ranges are cell-based, but a regex match index is a character index — and wide glyphs (CJK, etc.)
  * occupy two cells. Without this conversion, every link that follows a wide character is placed at the
@@ -536,30 +601,167 @@ function cellXForCharIndex(line: IBufferLine, charIndex: number): number {
 
   t.registerLinkProvider({
     provideLinks: (bufferLineNumber, callback) => {
+      const buffer = t.buffer.active;
       // xterm passes `bufferLineNumber` 1-based, but `getLine()` is 0-based (it forwards straight to
       // the buffer's `lines` array). Without the -1 we read the NEXT line, so each row's links would
       // belong to the row below it and the last row would read past the buffer and get none.
-      const line = t.buffer.active.getLine(bufferLineNumber - 1);
-      if (!line) {
+      const idx = bufferLineNumber - 1;
+      const firstLine = buffer.getLine(idx);
+      if (!firstLine) {
         callback([]);
         return;
       }
-      const text = line.translateToString(true);
-      const links: ILink[] = provideLinks(text).map((c) => ({
-        range: {
-          start: { x: cellXForCharIndex(line, c.start) + 1, y: bufferLineNumber },
-          end: { x: cellXForCharIndex(line, c.start + c.length) + 1, y: bufferLineNumber },
-        },
-        text: text.substr(c.start, c.length),
-        activate: () => vscode.postMessage({ type: "navigate", payload: c.payload }),
-        hover: (event) => {
-          const reqId = ++hoverReqId;
-          hoverState = { reqId, payload: c.payload };
-          showTooltip("…", event);
-          vscode.postMessage({ type: "hover", reqId, payload: c.payload });
-        },
-        leave: () => hideTooltip(),
-      }));
+      // A path/URL wider than the terminal is stored as several buffer rows (visual wrap), so a regex
+      // run per-row sees `…/ke` + `eper/…:31` and links each half. Rebuild the original unwrapped
+      // string: walk up to the first row of the wrap run, then append every wrapped continuation.
+      let startIdx = idx;
+      while (startIdx > 0 && buffer.getLine(startIdx)?.isWrapped) {
+        startIdx--;
+      }
+      let endIdx = idx;
+      while (buffer.getLine(endIdx + 1)?.isWrapped) {
+        endIdx++;
+      }
+      // Some tools (e.g. Claude Code CLI) emit explicit `\n  rest-of-path` newlines to break long
+      // paths. Those rows have isWrapped=false so the loop above misses them. Extend the range to
+      // include adjacent "soft continuation" rows: lines that start with 1–4 spaces followed by a
+      // path fragment (word chars + slash), whose predecessor looks like an incomplete path origin.
+      // How a row contributes to the rebuilt line: a soft continuation loses its indentation, any
+      // other row keeps its cells (minus trailing padding).
+      const rowText = (i: number): string => {
+        const seg = buffer.getLine(i)!;
+        return i > startIdx && !seg.isWrapped
+          ? seg.translateToString(true).trimStart()
+          : seg.translateToString(true);
+      };
+      const joinedRange = (from: number, to: number): string => {
+        let s = "";
+        for (let i = from; i <= to; i++) {
+          s += rowText(i);
+        }
+        return s;
+      };
+      // Walk up over continuation rows so the block starts where the path really begins. A wrap can
+      // split mid-token ("mq-kee" + "per-"), so a continuation need not contain a separator itself.
+      // Stop as soon as the row directly above is no longer a path continuation — that row is the
+      // genuine origin, and walking past it (e.g. onto a blank line) would make the whole extension
+      // get rejected and leave only a fragment link.
+      let upIdx = startIdx;
+      while (upIdx > 0) {
+        const curLine = buffer.getLine(upIdx);
+        if (!curLine || curLine.isWrapped) break;
+        if (!isSoftPathContinuation(curLine.translateToString(true))) break;
+        const prevLine = buffer.getLine(upIdx - 1);
+        if (!prevLine || prevLine.isWrapped) break;
+        if (!isSoftPathContinuation(prevLine.translateToString(true))) {
+          break;
+        }
+        upIdx--;
+      }
+      // Keep the upward extension only when the row we landed on really opens a path — otherwise an
+      // unrelated line above would be glued onto the fragment.
+      if (upIdx !== startIdx) {
+        const first = buffer.getLine(upIdx);
+        if (first && looksLikeSoftWrapOrigin(first.translateToString(true))) {
+          startIdx = upIdx;
+        }
+      }
+      // Walk down while the next row continues the path AND everything joined so far is still an
+      // incomplete path; testing the accumulated text (not just the current row) is what lets a
+      // chain like "…/mq-kee" + "per-" + "core/…":31 rejoin into one link.
+      while (true) {
+        const nextLine = buffer.getLine(endIdx + 1);
+        if (!nextLine || nextLine.isWrapped) break;
+        if (!isSoftPathContinuation(nextLine.translateToString(true))) break;
+        if (!looksLikeSoftWrapOrigin(joinedRange(startIdx, endIdx))) break;
+        endIdx++;
+      }
+      // Per-segment char offset + 1-based row, so a char index in `combined` maps back to a cell.
+      // For xterm visual-wrap rows, use translateToString(false) so char indices align with screen
+      // cells. For soft-wrap origins trim trailing padding; for soft-wrap continuations strip the
+      // leading indentation (and record how many chars were skipped for the cell-index mapping).
+      const segStartChar: number[] = [];
+      const segLeadSkip: number[] = [];
+      const rowOf: number[] = [];
+      let combined = "";
+      for (let i = startIdx; i <= endIdx; i++) {
+        const seg = buffer.getLine(i);
+        if (!seg) {
+          break;
+        }
+        const nextSeg = i < endIdx ? buffer.getLine(i + 1) : null;
+        const nextIsSoftCont = nextSeg !== null && !nextSeg.isWrapped;
+        let segText: string;
+        let leadSkip = 0;
+        if (i > startIdx && !seg.isWrapped) {
+          // Soft-wrap continuation: strip indentation so the path rejoins correctly.
+          const raw = seg.translateToString(true);
+          const stripped = raw.trimStart();
+          leadSkip = raw.length - stripped.length;
+          segText = stripped;
+        } else if (nextIsSoftCont) {
+          // Soft-wrap origin: trim trailing padding so the continuation follows immediately.
+          segText = seg.translateToString(true);
+        } else {
+          segText = seg.translateToString(false);
+        }
+        segStartChar.push(combined.length);
+        segLeadSkip.push(leadSkip);
+        rowOf.push(i + 1);
+        combined += segText;
+      }
+      const segCount = rowOf.length;
+
+      // Map a char index in `combined` to a 1-based {x, y} cell. `isEnd` makes the position exclusive
+      // (one cell past the last char, xterm convention); if it lands on a row boundary it carries into
+      // the next wrapped row so a spanning link stays contiguous.
+      const cellForChar = (charIndex: number, isEnd: boolean): { x: number; y: number } => {
+        let k = 0;
+        while (k < segCount - 1 && charIndex >= segStartChar[k + 1]) {
+          k++;
+        }
+        const rel = charIndex - segStartChar[k];
+        const segLine = buffer.getLine(rowOf[k] - 1)!;
+        const cols = t.cols;
+        // segLeadSkip[k] compensates for stripped leading whitespace in soft-cont rows: rel=0 in
+        // `combined` corresponds to char segLeadSkip[k] in the actual buffer line.
+        let cellX = cellXForCharIndex(segLine, rel + segLeadSkip[k]);
+        let y = rowOf[k];
+        if (isEnd && cellX >= cols) {
+          if (k < segCount - 1) {
+            y = rowOf[k + 1];
+            cellX = 0;
+          } else {
+            cellX = cols;
+          }
+        }
+        return { x: cellX + 1, y };
+      };
+
+      const all = provideLinks(combined);
+      const links: ILink[] = all
+        .filter((c) => {
+          const s = cellForChar(c.start, false);
+          const e = cellForChar(c.start + c.length, true);
+          // Only surface the link on rows it actually spans (xterm calls provideLinks per row).
+          return s.y <= bufferLineNumber && bufferLineNumber <= e.y;
+        })
+        .map((c) => {
+          const s = cellForChar(c.start, false);
+          const e = cellForChar(c.start + c.length, true);
+          return {
+            range: { start: s, end: e },
+            text: combined.substr(c.start, c.length),
+            activate: () => vscode.postMessage({ type: "navigate", payload: c.payload }),
+            hover: (event) => {
+              const reqId = ++hoverReqId;
+              hoverState = { reqId, payload: c.payload };
+              showTooltip("…", event);
+              vscode.postMessage({ type: "hover", reqId, payload: c.payload });
+            },
+            leave: () => hideTooltip(),
+          };
+        });
       callback(links);
     },
   });
