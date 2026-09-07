@@ -86,7 +86,9 @@ export class YoloViewProvider implements vscode.WebviewViewProvider {
   }
 
   public reveal(): void {
-    // Focus the docked view (creates it on first use).
+    // The view lives in the Secondary Side Bar (right), which is hidden by default — reveal it first,
+    // then focus the docked view (the latter creates it on first use).
+    vscode.commands.executeCommand("workbench.action.focusSecondarySideBar");
     vscode.commands.executeCommand("yolo.panel.focus");
   }
 

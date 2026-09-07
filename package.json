@@ -8,8 +8,11 @@
   "engines": {
     "vscode": "^1.85.0"
   },
+  "enabledApiProposals": [
+    "contribSecondarySidebar"
+  ],
   "categories": [
-    "Other",
+    "AI",
     "Terminal"
   ],
   "activationEvents": [
@@ -27,16 +30,16 @@
       }
     ],
     "viewsContainers": {
-      "activitybar": [
+      "secondarySidebar": [
         {
-          "id": "yolo",
+          "id": "yolo-agents",
           "title": "YOLO",
           "icon": "media/icons/panelIcon.png"
         }
       ]
     },
     "views": {
-      "yolo": [
+      "yolo-agents": [
         {
           "type": "webview",
           "id": "yolo.panel",
