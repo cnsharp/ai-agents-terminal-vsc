@@ -17,23 +17,16 @@ export function renderPanelHtml(
   <link href="${styleUri}" rel="stylesheet" />
   <title>YOLO — AI Agents</title>
   <style>
-    html, body { margin: 0; padding: 0; height: 100%; background: var(--vscode-sideBar-background); color: var(--vscode-foreground); font-family: var(--vscode-font-family); }
-    #bar { display: flex; gap: 8px; align-items: center; padding: 6px 8px; background: var(--vscode-sideBar-background); border-bottom: 1px solid var(--vscode-panel-border); }
-    #bar button { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: 1px solid var(--vscode-panel-border); padding: 3px 6px; border-radius: 3px; }
-    #bar .yolo-toggle { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 24px; padding: 0; cursor: pointer; background: transparent; }
-    #bar .yolo-toggle:hover { background: var(--vscode-button-secondaryHoverBackground); }
+    html, body { margin: 0; padding: 0; height: 100%; background: var(--vscode-sideBar-background, #1e1e1e); color: var(--vscode-foreground, #cccccc); font-family: var(--vscode-font-family); }
+    #bar { display: flex; gap: 8px; align-items: center; padding: 6px 8px; background: var(--vscode-sideBar-background, #1e1e1e); border-bottom: 1px solid var(--vscode-panel-border, #333); }
+    #bar button { background: var(--vscode-button-secondaryBackground, #3a3a3a); color: var(--vscode-button-secondaryForeground, #cccccc); border: 1px solid var(--vscode-panel-border, #555); padding: 3px 6px; border-radius: 3px; }
+    #bar .yolo-toggle { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 24px; padding: 0; cursor: pointer; background: transparent; color: var(--vscode-button-secondaryForeground, #cccccc); }
+    #bar .yolo-toggle:hover { background: var(--vscode-button-secondaryHoverBackground, #444); }
+    #bar .yolo-toggle.active { background: var(--vscode-button-background, #0e639c); color: var(--vscode-button-foreground, #ffffff); }
     #bar .yolo-toggle .ic { width: 16px; height: 16px; display: none; }
     #bar .yolo-toggle:not(.active) .ic-off { display: inline-block; }
     #bar .yolo-toggle.active .ic-on { display: inline-block; }
-    body.vscode-dark .yolo-toggle:not(.active) .ic-off,
-    body.vscode-high-contrast .yolo-toggle:not(.active) .ic-off { display: none; }
-    body.vscode-dark .yolo-toggle:not(.active) .ic-off-dark,
-    body.vscode-high-contrast .yolo-toggle:not(.active) .ic-off-dark { display: inline-block; }
-    body.vscode-dark .yolo-toggle.active .ic-on,
-    body.vscode-high-contrast .yolo-toggle.active .ic-on { display: none; }
-    body.vscode-dark .yolo-toggle.active .ic-on-dark,
-    body.vscode-high-contrast .yolo-toggle.active .ic-on-dark { display: inline-block; }
-    #bar button:hover { background: var(--vscode-button-secondaryHoverBackground); }
+    #bar button:hover { background: var(--vscode-button-secondaryHoverBackground, #444); }
     #bar #settings { width: 28px; height: 24px; padding: 0; font-size: 14px; line-height: 1; display: inline-flex; align-items: center; justify-content: center; }
     .agent-pick { position: relative; display: inline-block; }
     .agent-btn { min-width: 140px; text-align: left; }
@@ -44,6 +37,7 @@ export function renderPanelHtml(
     .agent-opt .logo.lightning { display: inline-flex; align-items: center; justify-content: center; font-size: 14px; line-height: 1; opacity: 0.75; }
     .agent-opt .meta { display: flex; flex-direction: column; min-width: 0; }
     .agent-opt .name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .agent-empty { padding: 8px 10px; font-size: 12px; line-height: 1.4; opacity: 0.85; }
     #terminal { position: absolute; top: 38px; left: 0; right: 0; bottom: 0; padding: 4px; }
     .xterm { height: 100%; }
     .xterm-hover {

@@ -114,9 +114,7 @@ function renderSkipToggle(): void {
   btn.setAttribute("aria-pressed", skipEnabled ? "true" : "false");
   btn.innerHTML = `
     <img class="ic ic-off" src="${escapeAttr(skipIcons.off)}" alt="" />
-    <img class="ic ic-off-dark" src="${escapeAttr(skipIcons.offDark)}" alt="" />
-    <img class="ic ic-on" src="${escapeAttr(skipIcons.on)}" alt="" />
-    <img class="ic ic-on-dark" src="${escapeAttr(skipIcons.onDark)}" alt="" />`;
+    <img class="ic ic-on" src="${escapeAttr(skipIcons.on)}" alt="" />`;
 }
 
 // Resume toggle: render with the four icon variants (off/on × light/dark), selected via CSS.
@@ -130,9 +128,7 @@ function renderResumeToggle(): void {
   if (resumeIcons) {
     btn.innerHTML = `
       <img class="ic ic-off" src="${escapeAttr(resumeIcons.off)}" alt="" />
-      <img class="ic ic-off-dark" src="${escapeAttr(resumeIcons.offDark)}" alt="" />
-      <img class="ic ic-on" src="${escapeAttr(resumeIcons.on)}" alt="" />
-      <img class="ic ic-on-dark" src="${escapeAttr(resumeIcons.onDark)}" alt="" />`;
+      <img class="ic ic-on" src="${escapeAttr(resumeIcons.on)}" alt="" />`;
   }
 }
 
@@ -143,6 +139,14 @@ function renderAgentMenu(): void {
   }
   // Only show agents that resolved on PATH.
   const visible = agents.filter((a) => a.resolvedPath);
+  if (visible.length === 0) {
+    menu.innerHTML = `<div class="agent-empty">No agents detected on PATH.<br/>Install one or check settings.</div>`;
+    const btn = document.getElementById("agentBtn") as HTMLButtonElement | null;
+    if (btn) {
+      btn.textContent = "Select agent…";
+    }
+    return;
+  }
   menu.innerHTML = visible
     .map((a) => {
       const logo = a.iconUri
