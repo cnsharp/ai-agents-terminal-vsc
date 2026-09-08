@@ -3,7 +3,7 @@
 // "tool window" equivalent) and persists while hidden.
 
 import * as vscode from "vscode";
-import { spawnAgent, defaultCwd, type YoloPty, type SpawnBackend } from "./terminalProvider";
+import { spawnAgent, defaultCwd, type YoloPty, type SpawnBackend, type SpawnResult } from "./terminalProvider";
 import { toSerializable } from "../links/linkPatterns";
 import { resolveAgents, type AgentDef } from "../agents/catalog";
 import { canExecute, resolvePath } from "../agents/agentDetector";
@@ -30,17 +30,40 @@ interface AgentOption {
   iconUri?: string;
 }
 
+/**
+ * One open terminal tab. Mirrors IDEA's `Session` (widget + process + agent row + tab component +
+ * card key): everything a session needs lives here, so nothing is shared between tabs.
+ */
+export interface YoloSession {
+  /** Stable id ("session-1"), the VS Code equivalent of IDEA's CardLayout `cardKey`. */
+  id: string;
+  pty: YoloPty;
+  backend: SpawnBackend;
+  agentId: string;
+  displayName: string;
+  iconUri?: string;
+  command: string;
+  /** Rolling replay buffer for this session only (IDEA keeps every widget alive too). */
+  out: string;
+  /** Set while a close confirmation is in flight, so a double-click can't open a second dialog. */
+  closing?: boolean;
+}
+
 export class YoloViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = "yolo.panel";
-  private pty: YoloPty | undefined;
   private view: vscode.WebviewView | undefined;
-  /** Rolling buffer of PTY output since launch, replayed into a re-created webview so the session's
-   *  screen is restored after the view is disposed/recreated (toggle side bar, move panel, …). */
-  private ptyOut = "";
+  /**
+   * Open terminal sessions in tab order — the VS Code equivalent of IDEA's
+   * `sessions: MutableList<Session>` + `selectedIndex` in `YoloToolWindowFactory`. Every Launch adds a
+   * new session (it never kills an existing one), so several agents run side by side.
+   */
+  private sessions: YoloSession[] = [];
+  /** Id of the selected tab, or undefined when none is open (IDEA: `selectedIndex = -1`). */
+  private selectedId: string | undefined;
+  /** Monotonic id source for session ids — stable across closes, unlike array indices. */
+  private sessionSeq = 0;
+  /** Rolling buffer of PTY output per session, replayed into a re-created webview. */
   private static readonly PTY_OUT_CAP = 256 * 1024;
-  /** Backend + command of the session currently hosted by `pty`, so a re-created webview can re-attach. */
-  private backend: SpawnBackend | undefined;
-  private lastCommand = "";
 
   constructor(private readonly extensionUri: vscode.Uri) {
     // When any yolo.* setting changes (e.g. custom tools edited in Settings), re-scan installs and
@@ -81,9 +104,16 @@ export class YoloViewProvider implements vscode.WebviewViewProvider {
     this.sendInit();
   }
 
-  /** Kill the running PTY (called on extension deactivation to avoid orphaned agent processes). */
+  /** Kill every running PTY (called on extension deactivation to avoid orphaned agent processes). */
   public dispose(): void {
-    this.disposePty();
+    for (const s of this.sessions.splice(0)) {
+      try {
+        s.pty.kill();
+      } catch {
+        /* already gone */
+      }
+    }
+    this.selectedId = undefined;
   }
 
   public reveal(): void {
@@ -190,27 +220,44 @@ export class YoloViewProvider implements vscode.WebviewViewProvider {
     switch (msg?.type) {
       case "ready":
         this.sendInit();
-        // If a session is already running (the view was hidden / moved / re-created), re-attach the new
-        // webview to the existing PTY instead of losing the session. The webview's `spawned` handler sets
-        // `backend = embedded`, resets the fresh xterm, and replays the buffered output.
-        if (this.pty) {
+        // Re-attach the new webview to EVERY running session (the view may have been hidden / moved /
+        // re-created). Each gets its own `replay` so all tabs restore, not just one. postMessage is
+        // ordered, so `init` (matchers) always lands before the `spawned` messages that need it.
+        for (const s of this.sessions) {
           this.view?.webview.postMessage({
             type: "spawned",
-            command: this.lastCommand,
-            backend: this.backend,
-            replay: this.ptyOut,
+            sessionId: s.id,
+            agentId: s.agentId,
+            displayName: s.displayName,
+            iconUri: s.iconUri,
+            command: s.command,
+            backend: s.backend,
+            replay: s.out,
           });
+        }
+        if (this.selectedId) {
+          this.view?.webview.postMessage({ type: "selected", sessionId: this.selectedId });
         }
         break;
       case "input":
-        this.pty?.write(msg.data);
+        this.byId(msg.sessionId)?.pty.write(msg.data);
         break;
       case "resize":
         try {
-          this.pty?.resize(msg.cols, msg.rows);
+          if (msg.cols > 0 && msg.rows > 0) {
+            this.byId(msg.sessionId)?.pty.resize(msg.cols, msg.rows);
+          }
         } catch {
           /* terminal may not be ready for an intermediate size */
         }
+        break;
+      case "selectSession":
+        if (this.byId(msg.sessionId)) {
+          this.selectedId = msg.sessionId;
+        }
+        break;
+      case "closeSession":
+        void this.confirmAndClose(msg.sessionId);
         break;
       case "launch":
         this.launch(msg);
@@ -250,7 +297,9 @@ export class YoloViewProvider implements vscode.WebviewViewProvider {
   }
 
   private launch(msg: { agentId: string; skip: boolean; resume?: boolean; baseArgs?: string; cols?: number; rows?: number }): void {
-    this.disposePty();
+    // NOTE: deliberately no teardown of any existing session — every Launch opens a NEW tab, so
+    // several agents can run side by side (IDEA's addTerminalSession). The old single-session code
+    // killed the running PTY here.
     const def = resolveAgents().find((a) => a.id === msg.agentId);
     if (!def) {
       return;
@@ -291,26 +340,96 @@ export class YoloViewProvider implements vscode.WebviewViewProvider {
     }
     const preferPosix = process.platform === "win32" && posixIndicator.trim().startsWith("-");
 
-    let backend: SpawnBackend;
+    let result: SpawnResult;
     try {
-      const result = spawnAgent({ command: def.command, args, cwd: defaultCwd(), env, preferPosix, cols: msg.cols, rows: msg.rows });
-      this.pty = result.pty;
-      backend = result.backend;
-      this.backend = backend;
-      this.lastCommand = def.command;
+      result = spawnAgent({ command: def.command, args, cwd: defaultCwd(), env, preferPosix, cols: msg.cols, rows: msg.rows });
     } catch (e) {
       vscode.window.showErrorMessage(e instanceof Error ? e.message : String(e));
       return;
     }
-    this.pty.onData((data) => {
-      // Keep a rolling buffer so a re-created webview can replay the screen (see `replay` on `spawned`).
-      this.ptyOut += data;
-      if (this.ptyOut.length > YoloViewProvider.PTY_OUT_CAP) {
-        this.ptyOut = this.ptyOut.slice(-YoloViewProvider.PTY_OUT_CAP);
+    const session: YoloSession = {
+      id: `session-${++this.sessionSeq}`,
+      pty: result.pty,
+      backend: result.backend,
+      agentId: def.id,
+      displayName: def.displayName,
+      iconUri: this.iconUriFor(def),
+      command: def.command,
+      out: "",
+    };
+    this.sessions.push(session);
+    // IDEA: `selectedIndex = sessions.lastIndex` — a new tab becomes the active one.
+    this.selectedId = session.id;
+
+    // Capture `session`, never a shared field: routing through `this.*` here would send every
+    // session's output through whichever session was spawned last.
+    session.pty.onData((data) => {
+      session.out += data;
+      if (session.out.length > YoloViewProvider.PTY_OUT_CAP) {
+        session.out = session.out.slice(-YoloViewProvider.PTY_OUT_CAP);
       }
-      this.view?.webview.postMessage({ type: "data", data });
+      this.view?.webview.postMessage({ type: "data", sessionId: session.id, data });
     });
-    this.view?.webview.postMessage({ type: "spawned", command: def.command, backend });
+    this.view?.webview.postMessage({
+      type: "spawned",
+      sessionId: session.id,
+      agentId: session.agentId,
+      displayName: session.displayName,
+      iconUri: session.iconUri,
+      command: session.command,
+      backend: session.backend,
+    });
+  }
+
+  /** Look up a session by id. */
+  private byId(id?: string): YoloSession | undefined {
+    return id ? this.sessions.find((s) => s.id === id) : undefined;
+  }
+
+  /** Ask before tearing down a terminal, since closing kills the running PTY (IDEA: confirmCloseTab). */
+  private async confirmAndClose(id: string): Promise<void> {
+    const session = this.byId(id);
+    if (!session || session.closing) {
+      return;
+    }
+    session.closing = true;
+    const answer = await vscode.window.showWarningMessage(
+      "Close this terminal? The running process will be terminated.",
+      { modal: true },
+      "Close terminal"
+    );
+    // Re-check: the session may have been closed while the dialog was open.
+    if (!this.sessions.includes(session)) {
+      return;
+    }
+    session.closing = false;
+    if (answer !== "Close terminal") {
+      return;
+    }
+    this.closeSession(id);
+  }
+
+  /** Tear down a session: kill its PTY, drop it, and select a neighbour (IDEA: closeSession). */
+  private closeSession(id: string): void {
+    const idx = this.sessions.findIndex((s) => s.id === id);
+    if (idx < 0) {
+      return;
+    }
+    const [session] = this.sessions.splice(idx, 1);
+    try {
+      session.pty.kill();
+    } catch {
+      /* already gone */
+    }
+    this.view?.webview.postMessage({ type: "sessionClosed", sessionId: id });
+    if (this.sessions.length === 0) {
+      // IDEA: show the CARD_EMPTY placeholder again.
+      this.selectedId = undefined;
+    } else {
+      // Clamp to a neighbour — indices shifted when an earlier tab was closed.
+      this.selectedId = this.sessions[Math.min(idx, this.sessions.length - 1)].id;
+      this.view?.webview.postMessage({ type: "selected", sessionId: this.selectedId });
+    }
   }
 
   private async navigate(payload: LinkPayload): Promise<void> {
@@ -348,11 +467,4 @@ export class YoloViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
-  private disposePty(): void {
-    this.pty?.kill();
-    this.pty = undefined;
-    this.backend = undefined;
-    this.lastCommand = "";
-    this.ptyOut = "";
-  }
 }

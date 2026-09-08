@@ -55,10 +55,25 @@ interface InitMessage {
   lastAgentId?: string;
 }
 
+type Backend = "embedded" | "vscode-terminal";
+
 type HostMessage =
   | InitMessage
-  | { type: "data"; data: string }
-  | { type: "spawned"; command: string; backend?: "embedded" | "vscode-terminal"; replay?: string }
+  | { type: "data"; sessionId: string; data: string }
+  | {
+      type: "spawned";
+      sessionId: string;
+      agentId: string;
+      displayName: string;
+      iconUri?: string;
+      command: string;
+      backend?: Backend;
+      replay?: string;
+    }
+  /** Host tells the webview which tab is active (after re-attach, and after a close). */
+  | { type: "selected"; sessionId: string }
+  /** Host confirmed the close and killed the PTY; the webview disposes the terminal. */
+  | { type: "sessionClosed"; sessionId: string }
   | { type: "hoverResult"; reqId: number; text?: string };
 
 interface LinkPayload {
@@ -105,10 +120,37 @@ let skipIcons: SkipIconSet | undefined;
 let resumeEnabled = false;
 let resumeIcons: SkipIconSet | undefined;
 
-// Which backend is currently hosting the running agent. When "vscode-terminal", the agent runs in a
-// real VS Code terminal (revealed) and the embedded xterm only shows a notice — keystrokes/ output are
-// not bridged, so we must not forward input (that would double-type into the revealed terminal).
-let backend: "embedded" | "vscode-terminal" | undefined;
+/**
+ * One open terminal tab — the webview half of a host `YoloSession`. Mirrors IDEA's `Session`
+ * (widget + process + agent row + tab component + card key): each tab owns its terminal, its fit
+ * addon and its own TypedInputGuard, so nothing leaks between tabs.
+ */
+interface SessionView {
+  id: string;
+  agentId: string;
+  displayName: string;
+  iconUri?: string;
+  command: string;
+  /** "vscode-terminal" means the agent runs in a revealed real terminal and this xterm only shows a
+   *  notice — keystrokes are not bridged, so we must not forward input (that would double-type). */
+  backend: Backend | undefined;
+  term: ITerminal;
+  fit: FitAddon;
+  guard: TypedInputGuard;
+  card: HTMLDivElement;
+  hoverEl: HTMLDivElement;
+}
+
+/** Open terminals in tab order (IDEA: `sessions`). */
+const sessions: SessionView[] = [];
+/** Id of the visible tab (IDEA: `selectedIndex`). */
+let activeId: string | undefined;
+/** Last known good grid size; seeds a terminal created while its card is still hidden. */
+let lastDims: { cols: number; rows: number } | undefined;
+
+function byId(id?: string): SessionView | undefined {
+  return id ? sessions.find((s) => s.id === id) : undefined;
+}
 
 function escapeAttr(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -229,46 +271,23 @@ window.addEventListener("message", (ev: MessageEvent) => {
       renderResumeToggle();
       break;
     case "data":
-      // Only the embedded backend pipes output here; the vscode-terminal backend renders in the
-      // revealed VS Code terminal instead.
-      if (backend === "embedded") {
-        term?.write(msg.data);
-      }
+      // Route to the owning tab. Hidden tabs still receive their output so their scrollback stays
+      // current — switching to them then shows an up-to-date screen.
+      byId(msg.sessionId)?.term.write(msg.data);
       break;
     case "spawned":
-      backend = msg.backend;
-      if (backend === "vscode-terminal") {
-        term?.reset();
-        term?.writeln(
-          `→ launched ${msg.command} in the VS Code Terminal — focus it to interact.`
-        );
-        term?.writeln(
-          "(node-pty couldn't spawn a PTY here, so the agent runs in a real VS Code terminal instead.)"
-        );
-      } else {
-        term?.reset();
-        // On re-attach (view was hidden/moved and recreated) the new xterm is blank. Replay the buffered
-        // PTY output so the session's screen is restored immediately, then re-sync size to force a live
-        // redraw from the agent.
-        if (term && msg.replay) {
-          term.write(msg.replay);
-        }
-        if (term && term.cols > 0 && term.rows > 0) {
-          // Toggle the size (+1/-1) so the running TUI repaints even when the panel size is unchanged:
-          // a plain resize to identical dimensions emits no SIGWINCH, which would leave a re-attached
-          // terminal blank. The transient off-by-one is harmless.
-          vscode.postMessage({ type: "resize", cols: term.cols, rows: term.rows + 1 });
-          vscode.postMessage({ type: "resize", cols: term.cols, rows: term.rows });
-        }
-        // Grab keyboard focus so the user can type into the agent immediately after launch (a real
-        // terminal does this). Without it, arrow/Enter keystrokes are lost until the user clicks in.
-        term?.focus();
-      }
+      onSpawned(msg);
+      break;
+    case "selected":
+      selectSession(msg.sessionId);
+      break;
+    case "sessionClosed":
+      disposeSession(msg.sessionId);
       break;
     case "hoverResult":
       // Only apply if this reply matches the link currently being hovered.
       if (hoverState && msg.reqId === hoverState.reqId && msg.text) {
-        hoverEl.textContent = msg.text;
+        hoverState.session.hoverEl.textContent = msg.text;
       }
       break;
   }
@@ -290,16 +309,18 @@ document.addEventListener("click", (e) => {
 });
 
 document.getElementById("launch")?.addEventListener("click", () => {
-  // Send the xterm's *actual* dimensions so the host spawns the PTY at the same size the canvas
-  // displays. Without this the PTY defaults to 80x30 while the xterm is the (smaller) panel size,
-  // and a size mismatch makes TUIs like codebuddy's session picker mis-render / re-list.
+  // Send the panel's real grid so the host spawns the PTY at the size the terminal will display.
+  // Without this the PTY defaults to 80x30 while the panel is much smaller, and a size mismatch makes
+  // TUIs like codebuddy's session picker mis-render / re-list. There may be no terminal yet (first
+  // launch), so measure the container instead of reading a terminal's cols/rows.
+  const dims = measureDims();
   vscode.postMessage({
     type: "launch",
     agentId: selectedAgentId,
     skip: skipEnabled,
     resume: resumeEnabled,
-    cols: term?.cols,
-    rows: term?.rows,
+    cols: dims?.cols,
+    rows: dims?.rows,
   });
 });
 
@@ -367,19 +388,16 @@ function buildTerminalTheme(): ITheme {
 }
 
 function applyTheme(): void {
-  if (!term) {
-    return;
+  const theme = buildTerminalTheme();
+  for (const s of sessions) {
+    s.term.options.theme = theme;
   }
-  term.options.theme = buildTerminalTheme();
-  const wrap = document.getElementById("terminal");
+  const wrap = document.getElementById("content");
   if (wrap) {
     wrap.style.background =
       readVscodeColor("--vscode-sideBar-background") ?? readVscodeColor("--vscode-editor-background") ?? "";
   }
 }
-
-// --- Terminal (xterm) — isolated so a failure here can't break the agent picker above ---
-let term: ITerminal | undefined;
 
 function num(s: string | undefined): number | undefined {
   if (s === undefined) {
@@ -455,11 +473,13 @@ function provideLinks(lineText: string): Candidate[] {
   return accepted;
 }
 
-// Hover preview (xterm 5.x DOM-based tooltip): one shared element appended to term.element. On hover
-// we post a `hover` request to the host, show a "…" placeholder, then fill in the resolved text when
-// the host replies with `hoverResult`. Keyed by reqId so stale replies are ignored.
+// Hover preview (xterm 5.x DOM-based tooltip): one tooltip element per session, appended to that
+// session's term.element. On hover we post a `hover` request to the host, show a "…" placeholder,
+// then fill in the resolved text when the host replies with `hoverResult`. Keyed by reqId so stale
+// replies are ignored. Only one terminal is visible at a time, so a single hoverReqId/hoverState
+// pair is enough — but it must remember WHICH session it belongs to.
 let hoverReqId = 0;
-let hoverState: { reqId: number; payload: LinkPayload } | undefined;
+let hoverState: { reqId: number; payload: LinkPayload; session: SessionView } | undefined;
 
 /**
  * Tracks the text the user has typed into the embedded terminal but not yet submitted, so the input
@@ -555,74 +575,307 @@ class TypedInputGuard {
   }
 }
 
-const typedInput = new TypedInputGuard();
-
-const hoverEl = document.createElement("div");
-hoverEl.className = "xterm-hover";
-hoverEl.style.display = "none";
-
-function showTooltip(text: string, event: MouseEvent): void {
-  hoverEl.textContent = text;
-  hoverEl.style.display = "block";
-  const rect = (term?.element ?? document.body).getBoundingClientRect();
+function showTooltip(session: SessionView, text: string, event: MouseEvent): void {
+  const el = session.hoverEl;
+  el.textContent = text;
+  el.style.display = "block";
+  const rect = (session.term.element ?? document.body).getBoundingClientRect();
   const x = event.clientX - rect.left;
   const y = event.clientY - rect.top;
-  hoverEl.style.left = `${x + 12}px`;
-  hoverEl.style.top = `${Math.max(0, y - hoverEl.offsetHeight - 6)}px`;
+  el.style.left = `${x + 12}px`;
+  el.style.top = `${Math.max(0, y - el.offsetHeight - 6)}px`;
 }
 
 function hideTooltip(): void {
-  hoverEl.style.display = "none";
+  if (hoverState) {
+    hoverState.session.hoverEl.style.display = "none";
+  }
   hoverState = undefined;
 }
 
-function initTerminal(): void {
-  const el = document.getElementById("terminal");
-  if (!el) {
-    return;
+/**
+ * Size one session's terminal to its card. A card hidden with `visibility:hidden` keeps its layout
+ * box, so every terminal (hidden ones included) stays sized to the panel and its PTY already knows
+ * the true width — output written while hidden therefore wraps correctly. (`display:none` would
+ * collapse the box to 0 cells and break both.)
+ */
+function fitSession(s: SessionView): void {
+  const d = s.fit.proposeDimensions();
+  if (d && !Number.isNaN(d.cols) && !Number.isNaN(d.rows)) {
+    if (s.term.cols !== d.cols || s.term.rows !== d.rows) {
+      s.fit.fit(); // fires onResize -> posts `resize` -> host resizes this session's PTY
+    }
+    lastDims = { cols: s.term.cols, rows: s.term.rows };
+  } else if (lastDims && (s.term.cols !== lastDims.cols || s.term.rows !== lastDims.rows)) {
+    // The panel itself has no size yet (webview not laid out) — fall back to the last good grid.
+    s.term.resize(lastDims.cols, lastDims.rows);
   }
-  const t = new Terminal({
-    fontFamily: "var(--vscode-editor-font-family, monospace)",
-    fontSize: 13,
-    cursorBlink: true,
-    theme: buildTerminalTheme(),
-    // Match VS Code's integrated terminal, which uses Unicode 11. Without this, TUI logos/banners that
-    // rely on newer glyphs (box-drawing, special symbols, emoji) render blank or garbled — making the
-    // logo appear "missing" compared to the native terminal.
-    unicode: { version: 11 },
-  });
-  const fit = new FitAddon();
-  t.loadAddon(fit);
-  t.open(el);
-  fit.fit();
-  t.element?.appendChild(hoverEl);
+}
 
-  t.onData((d) => {
-    // Track the user's keystrokes/pastes so the input box is never linkified (IntelliJ-style
+function fitAll(): void {
+  for (const s of sessions) {
+    fitSession(s);
+  }
+}
+
+/**
+ * Best-effort grid measurement for the `launch` message, which is sent before any terminal exists.
+ * Uses the last known grid when available, else probes with a hidden span of 100 "W"s.
+ */
+function measureDims(): { cols: number; rows: number } | undefined {
+  if (lastDims) {
+    return lastDims;
+  }
+  const host = document.getElementById("content");
+  if (!host || host.clientWidth <= 0 || host.clientHeight <= 0) {
+    return undefined;
+  }
+  const probe = document.createElement("span");
+  probe.style.cssText =
+    "position:absolute;visibility:hidden;white-space:pre;font-family:var(--vscode-editor-font-family,monospace);font-size:13px;";
+  probe.textContent = "W".repeat(100);
+  host.appendChild(probe);
+  const r = probe.getBoundingClientRect();
+  const cw = r.width / 100;
+  const ch = r.height || 17;
+  probe.remove();
+  if (!cw || !ch) {
+    return undefined;
+  }
+  return {
+    cols: Math.max(20, Math.floor((host.clientWidth - 8) / cw)),
+    rows: Math.max(5, Math.floor((host.clientHeight - 8) / ch)),
+  };
+}
+
+/** Create (or re-attach) one terminal tab. Idempotent by session id. */
+function createSession(msg: Extract<HostMessage, { type: "spawned" }>): SessionView | undefined {
+  const content = document.getElementById("content");
+  if (!content) {
+    return undefined;
+  }
+  const existing = byId(msg.sessionId);
+  if (existing) {
+    return existing; // re-attach: reuse the tab, the caller replays output into it
+  }
+
+  const card = document.createElement("div");
+  // Start hidden: activateSession() unhides the tab that should be visible. Without this, a
+  // re-attach that recreates several tabs would briefly show them all stacked.
+  card.className = "term-card hidden";
+  card.dataset.sid = msg.sessionId;
+  content.appendChild(card);
+
+  const session: SessionView = {
+    id: msg.sessionId,
+    agentId: msg.agentId,
+    displayName: msg.displayName,
+    iconUri: msg.iconUri,
+    command: msg.command,
+    backend: msg.backend,
+    // Seeded with the last good grid so a card created while hidden still has real dimensions.
+    term: new Terminal({
+      fontFamily: "var(--vscode-editor-font-family, monospace)",
+      fontSize: 13,
+      cursorBlink: true,
+      theme: buildTerminalTheme(),
+      // Match VS Code's integrated terminal, which uses Unicode 11. Without this, TUI logos/banners
+      // that rely on newer glyphs (box-drawing, special symbols, emoji) render blank or garbled —
+      // making the logo appear "missing" compared to the native terminal.
+      unicode: { version: 11 },
+      cols: lastDims?.cols,
+      rows: lastDims?.rows,
+    }),
+    fit: new FitAddon(),
+    guard: new TypedInputGuard(), // one guard per tab (IDEA parity)
+    card,
+    hoverEl: document.createElement("div"),
+  };
+  session.hoverEl.className = "xterm-hover";
+  session.hoverEl.style.display = "none";
+
+  session.term.loadAddon(session.fit);
+  session.term.open(card);
+  fitSession(session);
+  session.term.element?.appendChild(session.hoverEl);
+
+  session.term.onData((d) => {
+    // Track this tab's keystrokes/pastes so its input box is never linkified (IntelliJ-style
     // TypedInputGuard). onData fires only for *user* input, not for term.write() output.
-    typedInput.onUserInput(d);
+    session.guard.onUserInput(d);
     // Only forward keystrokes when the agent is hosted in the embedded terminal. In the
     // vscode-terminal backend the user types directly in the revealed VS Code terminal; forwarding
     // here would double-type.
-    if (backend === "embedded") {
-      vscode.postMessage({ type: "input", data: d });
+    if (session.backend === "embedded") {
+      vscode.postMessage({ type: "input", sessionId: session.id, data: d });
     }
   });
-  t.onResize(({ cols, rows }) => vscode.postMessage({ type: "resize", cols, rows }));
-  window.addEventListener("resize", () => fit.fit());
-  // When the panel is hidden and reshown (retainContextWhenHidden keeps the context alive), re-fit so
-  // the terminal matches the panel's current size — the layout may have changed while it was hidden.
-  document.addEventListener("visibilitychange", () => {
-    if (!document.hidden) {
-      fit.fit();
+  session.term.onResize(({ cols, rows }) => {
+    if (cols > 0 && rows > 0) {
+      lastDims = { cols, rows };
+      vscode.postMessage({ type: "resize", sessionId: session.id, cols, rows });
     }
   });
 
-  // Re-theme xterm when the user switches VS Code color themes. VS Code rewrites the theme CSS
-  // variables on `body` (and sometimes `:root`) when the theme changes, so watch both.
-  const themeObserver = new MutationObserver(() => applyTheme());
-  themeObserver.observe(document.body, { attributes: true, attributeFilter: ["style"] });
-  themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["style"] });
+  registerLinkProvider(session);
+  sessions.push(session);
+  return session;
+}
+
+function onSpawned(msg: Extract<HostMessage, { type: "spawned" }>): void {
+  const s = createSession(msg);
+  if (!s) {
+    return;
+  }
+  s.backend = msg.backend;
+  s.term.reset();
+  if (msg.backend === "vscode-terminal") {
+    s.term.writeln(`→ launched ${msg.command} in the VS Code Terminal — focus it to interact.`);
+    s.term.writeln(
+      "(node-pty couldn't spawn a PTY here, so the agent runs in a real VS Code terminal instead.)"
+    );
+  } else {
+    // On re-attach (view was hidden/moved and recreated) the new xterm is blank. Replay the buffered
+    // PTY output so the session's screen is restored immediately, then re-sync size to force a live
+    // redraw from the agent.
+    if (msg.replay) {
+      s.term.write(msg.replay);
+    }
+    if (s.term.cols > 0 && s.term.rows > 0) {
+      // Toggle the size (+1/-1) so the running TUI repaints even when the panel size is unchanged:
+      // a plain resize to identical dimensions emits no SIGWINCH, which would leave a re-attached
+      // terminal blank. The transient off-by-one is harmless.
+      vscode.postMessage({ type: "resize", sessionId: s.id, cols: s.term.cols, rows: s.term.rows + 1 });
+      vscode.postMessage({ type: "resize", sessionId: s.id, cols: s.term.cols, rows: s.term.rows });
+    }
+  }
+  renderTabs();
+  // Activate the new tab (IDEA: selectedIndex = lastIndex) unless re-attaching, where the host
+  // tells us which tab was selected.
+  if (!activeId || !msg.replay) {
+    activateSession(s.id);
+  }
+}
+
+/** Make `id` the visible tab (IDEA: selectTab + updateTabSelection). */
+function activateSession(id: string): void {
+  const s = byId(id);
+  if (!s) {
+    return;
+  }
+  const prev = byId(activeId);
+  if (prev) {
+    prev.card.classList.add("hidden");
+  }
+  activeId = id;
+  s.card.classList.remove("hidden");
+  fitSession(s);
+  s.term.refresh(0, Math.max(0, s.term.rows - 1)); // VS Code analog of IDEA's forceReinitFull()
+  // Grab keyboard focus so the user can type into the agent immediately (a real terminal does this).
+  s.term.focus();
+  renderTabs();
+}
+
+function selectSession(id: string): void {
+  if (id === activeId) {
+    return;
+  }
+  activateSession(id);
+  vscode.postMessage({ type: "selectSession", sessionId: id });
+}
+
+/** Tear down a tab after the host confirmed the close (IDEA: closeSession). */
+function disposeSession(id: string): void {
+  const i = sessions.findIndex((s) => s.id === id);
+  if (i < 0) {
+    return;
+  }
+  const s = sessions[i];
+  if (hoverState?.session.id === id) {
+    hideTooltip();
+  }
+  try {
+    s.term.dispose();
+  } catch {
+    /* already gone */
+  }
+  s.card.remove();
+  sessions.splice(i, 1);
+  if (activeId === id) {
+    activeId = sessions.length ? sessions[Math.min(i, sessions.length - 1)].id : undefined;
+  }
+  for (const o of sessions) {
+    o.card.classList.toggle("hidden", o.id !== activeId);
+  }
+  renderTabs();
+  const next = byId(activeId);
+  if (next) {
+    fitSession(next);
+    next.term.focus();
+  }
+}
+
+function requestClose(id: string): void {
+  vscode.postMessage({ type: "closeSession", sessionId: id });
+}
+
+/** Paint the tab strip: one entry per session + the overflow chevron (IDEA: tabBar / tabDropdownBtn). */
+function renderTabs(): void {
+  const bar = document.getElementById("tabbar");
+  const tabs = document.getElementById("tabs");
+  const empty = document.getElementById("empty");
+  const chev = document.getElementById("tabChevron") as HTMLButtonElement | null;
+  const menu = document.getElementById("tabMenu");
+  if (!bar || !tabs || !empty || !menu) {
+    return;
+  }
+  bar.hidden = sessions.length === 0;
+  empty.hidden = sessions.length > 0;
+  // IDEA: the switch arrow only appears once there is something to switch to.
+  if (chev) {
+    chev.hidden = sessions.length <= 1;
+  }
+
+  tabs.innerHTML = sessions
+    .map(
+      (s) => `
+    <div class="tab ${s.id === activeId ? "active" : ""}" data-sid="${s.id}" title="${escapeAttr(s.command)}">
+      ${s.iconUri ? `<img class="logo" src="${escapeAttr(s.iconUri)}" alt="" />` : `<span class="logo">⚡</span>`}
+      <span class="tname">${escapeAttr(s.displayName)}</span>
+      <button class="tclose" data-sid="${s.id}" title="Close terminal" type="button">✕</button>
+    </div>`
+    )
+    .join("");
+
+  tabs.querySelectorAll<HTMLElement>(".tab").forEach((el) => {
+    // Don't let the tab steal focus from the terminal when clicked.
+    el.addEventListener("mousedown", (e) => e.preventDefault());
+    el.addEventListener("click", (e) => {
+      const target = e.target as HTMLElement;
+      if (target.classList.contains("tclose")) {
+        requestClose(el.dataset.sid!);
+        return;
+      }
+      selectSession(el.dataset.sid!);
+    });
+  });
+
+  menu.innerHTML = sessions
+    .map(
+      (s) => `
+    <div class="agent-opt tab-opt ${s.id === activeId ? "cur" : ""}" data-sid="${s.id}">
+      ${s.iconUri ? `<img class="logo" src="${escapeAttr(s.iconUri)}" alt="" />` : `<span class="logo lightning">⚡</span>`}
+      <div class="meta"><div class="name">${escapeAttr(s.displayName)}</div></div>
+    </div>`
+    )
+    .join("");
+  menu.querySelectorAll<HTMLElement>(".tab-opt").forEach((el) => {
+    el.addEventListener("click", () => {
+      menu.hidden = true;
+      selectSession(el.dataset.sid!);
+    });
+  });
+}
 
 /**
  * True when the buffer line looks like a soft-wrap continuation: tools that break long paths emit
@@ -744,9 +997,18 @@ function cellXForCharIndex(line: IBufferLine, charIndex: number): number {
   return x;
 }
 
-  t.registerLinkProvider({
+/**
+ * Attach the combined link provider to ONE session's terminal.
+ *
+ * Everything here must resolve per session: `s.term` for the buffer/cols and — critically — that
+ * session's own `guard`, so what you type in one tab never suppresses (or leaks into) links in
+ * another. A module-level guard here would couple every tab's input state together.
+ */
+function registerLinkProvider(s: SessionView): void {
+  const guard = s.guard;
+  s.term.registerLinkProvider({
     provideLinks: (bufferLineNumber, callback) => {
-      const buffer = t.buffer.active;
+      const buffer = s.term.buffer.active;
       // TUIs (interactive prompts, pickers, editors) run in the alternate screen buffer. Disable all
       // terminal linkification there; normal agent output (normal buffer) keeps its links.
       if (buffer.type === "alternate") {
@@ -877,7 +1139,7 @@ function cellXForCharIndex(line: IBufferLine, charIndex: number): number {
         }
         const rel = charIndex - segStartChar[k];
         const segLine = buffer.getLine(rowOf[k] - 1)!;
-        const cols = t.cols;
+        const cols = s.term.cols;
         // segLeadSkip[k] compensates for stripped leading whitespace in soft-cont rows: rel=0 in
         // `combined` corresponds to char segLeadSkip[k] in the actual buffer line.
         let cellX = cellXForCharIndex(segLine, rel + segLeadSkip[k]);
@@ -897,7 +1159,7 @@ function cellXForCharIndex(line: IBufferLine, charIndex: number): number {
       // Suppress any link whose text overlaps what the user is currently typing into the input box
       // (state-based, mirroring IntelliJ's InputAwareLinkFilter — no timing guesswork). Typed text
       // is tracked via xterm onData, so this catches input boxes that live in the NORMAL buffer too.
-      const typedSpans = typedInput.spansIn(combined);
+      const typedSpans = guard.spansIn(combined);
       const links: ILink[] = all
         .filter((c) => {
           if (typedSpans.length) {
@@ -907,22 +1169,22 @@ function cellXForCharIndex(line: IBufferLine, charIndex: number): number {
               return false;
             }
           }
-          const s = cellForChar(c.start, false);
-          const e = cellForChar(c.start + c.length, true);
+          const startCell = cellForChar(c.start, false);
+          const endCell = cellForChar(c.start + c.length, true);
           // Only surface the link on rows it actually spans (xterm calls provideLinks per row).
-          return s.y <= bufferLineNumber && bufferLineNumber <= e.y;
+          return startCell.y <= bufferLineNumber && bufferLineNumber <= endCell.y;
         })
         .map((c) => {
-          const s = cellForChar(c.start, false);
-          const e = cellForChar(c.start + c.length, true);
+          const startCell = cellForChar(c.start, false);
+          const endCell = cellForChar(c.start + c.length, true);
           return {
-            range: { start: s, end: e },
+            range: { start: startCell, end: endCell },
             text: combined.substr(c.start, c.length),
             activate: () => vscode.postMessage({ type: "navigate", payload: c.payload }),
             hover: (event) => {
               const reqId = ++hoverReqId;
-              hoverState = { reqId, payload: c.payload };
-              showTooltip("…", event);
+              hoverState = { reqId, payload: c.payload, session: s };
+              showTooltip(s, "…", event);
               vscode.postMessage({ type: "hover", reqId, payload: c.payload });
             },
             leave: () => hideTooltip(),
@@ -931,18 +1193,39 @@ function cellXForCharIndex(line: IBufferLine, charIndex: number): number {
       callback(links);
     },
   });
-
-  term = t;
 }
 
+// --- Startup: no terminal is created up front any more (the panel boots into the empty state and
+// terminals appear as tabs when agents are launched). Only the global listeners are wired here, and
+// they act on every session. ---
 try {
-  initTerminal();
+  renderTabs();
+  // Keep every tab sized to the panel; a hidden card still has a layout box, so this fits them all.
+  window.addEventListener("resize", () => fitAll());
+  // When the panel is hidden and reshown (retainContextWhenHidden keeps the context alive), re-fit so
+  // the terminals match the panel's current size — the layout may have changed while it was hidden.
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+      fitAll();
+    }
+  });
+
+  // Re-theme every xterm when the user switches VS Code color themes. VS Code rewrites the theme CSS
+  // variables on `body` (and sometimes `:root`) when the theme changes, so watch both.
+  const themeObserver = new MutationObserver(() => applyTheme());
+  themeObserver.observe(document.body, { attributes: true, attributeFilter: ["style"] });
+  themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["style"] });
+
+  // Overflow chevron: list every open terminal for quick switching (IDEA: tabDropdownBtn).
+  document.getElementById("tabChevron")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const menu = document.getElementById("tabMenu") as HTMLDivElement | null;
+    if (menu) {
+      menu.hidden = !menu.hidden;
+    }
+  });
 } catch (e) {
-  // Terminal init failed (layout/element/xterm issue). The agent picker above is unaffected, so the
-  // panel stays usable; surface the error instead of silently dying.
-  console.error("YOLO terminal init failed:", e);
-  const el = document.getElementById("terminal");
-  if (el) {
-    el.textContent = "Terminal failed to initialise: " + String(e);
-  }
+  // Startup wiring failed. The agent picker above is unaffected, so the panel stays usable; surface
+  // the error instead of silently dying.
+  console.error("YOLO panel startup failed:", e);
 }
