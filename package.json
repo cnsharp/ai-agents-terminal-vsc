@@ -211,6 +211,7 @@
     "watch": "tsc -watch -p ./",
     "build:webview": "esbuild src/webview/panel.ts --bundle --outdir=media/dist --loader:.css=css --sourcemap",
     "watch:webview": "npm run build:webview -- --watch",
+    "package": "vsce package --out dist/",
     "test": "node --test"
   },
   "dependencies": {

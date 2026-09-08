@@ -1,14 +1,16 @@
 # Agent YOLO — AI Agents Extender (VS Code)
 
-A VS Code port of the IntelliJ *YOLO: AI Agents Extender* plugin. It opens an embedded terminal
-panel that launches AI CLI agents (Claude Code, Codex, CodeBuddy, Goose, …) with a one-click
+A VS Code port of the IntelliJ *Agent YOLO* plugin. It opens an embedded terminal
+panel that launches AI CLI agents (Claude Code, Codex, Cursor CLI, …) with a one-click
 **Skip permissions (YOLO)** toggle, and makes terminal output clickable: file paths, stack-trace
 frames, type/member names, and URLs all become navigation links.
 
-> Extension ID: `cnsharp.agentyolo` — display name **Agent YOLO — AI Agents Extender**.
+> Extension ID: `cnsharp.agentyolo` — display name **Agent YOLO**.
 > See `ARCHITECTURE.md` for the full component map and design rationale.
 
-## Features (mirrors the IntelliJ plugin)
+![Agent YOLO panel — embedded multi-tab agent terminal with clickable links](media/screenshots/vsc-yolo-panel.png)
+
+## Features
 
 - Agent dropdown populated from a promoted list + user custom tools, filtered by what is actually installed, in a docked activity-bar view.
 - **YOLO toggle** injects the per-agent skip-permission flag (e.g. `--dangerously-skip-permissions`,
