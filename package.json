@@ -4,6 +4,10 @@
   "description": "Launch AI CLI agents (Claude Code, Codex, Cursor CLI, …) in an embedded terminal with clickable file/type links.",
   "version": "0.1.0",
   "publisher": "cnsharp",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cnsharp/ai-agents-terminal-vsc.git"
+  },
   "icon": "media/icons/extensionIcon.png",
   "engines": {
     "vscode": "^1.85.0"
@@ -15,6 +19,10 @@
     "AI"
   ],
   "main": "./out/extension.js",
+  "activationEvents": [
+    "onView:yolo.panel",
+    "onCommand:yolo.openPanel"
+  ],
   "contributes": {
     "commands": [
       {
