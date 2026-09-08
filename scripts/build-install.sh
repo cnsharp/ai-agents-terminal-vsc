@@ -30,7 +30,7 @@ npm run build
 
 echo "==> package"
 marker="$(mktemp)"
-npx vsce package --allow-missing-repository --out dist/
+npx vsce package --allow-missing-repository --out dist/ --baseContentUrl https://github.com/cnsharp/ai-agents-terminal-vsc/blob/yolo --baseImagesUrl https://github.com/cnsharp/ai-agents-terminal-vsc/raw/yolo
 vsix="$(find "$REPO_ROOT/dist" -maxdepth 1 -name '*.vsix' -newer "$marker" -exec ls -t {} + 2>/dev/null | head -n 1 || true)"
 rm -f "$marker"
 

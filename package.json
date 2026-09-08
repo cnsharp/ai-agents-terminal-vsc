@@ -3,7 +3,7 @@
   "displayName": "Agent YOLO",
   "description": "Launch AI CLI agents (Claude Code, Codex, Cursor CLI, …) in an embedded terminal with clickable file/type links.",
   "version": "0.1.0",
-  "publisher": "cnsharp",
+  "publisher": "CnSharp",
   "repository": {
     "type": "git",
     "url": "https://github.com/cnsharp/ai-agents-terminal-vsc.git"
@@ -12,9 +12,6 @@
   "engines": {
     "vscode": "^1.85.0"
   },
-  "enabledApiProposals": [
-    "contribSecondarySidebar"
-  ],
   "categories": [
     "AI"
   ],
@@ -33,7 +30,7 @@
       }
     ],
     "viewsContainers": {
-      "secondarySidebar": [
+      "activitybar": [
         {
           "id": "yolo-agents",
           "title": "Agent YOLO",
@@ -219,7 +216,7 @@
     "watch": "tsc -watch -p ./",
     "build:webview": "esbuild src/webview/panel.ts --bundle --outdir=media/dist --loader:.css=css --sourcemap",
     "watch:webview": "npm run build:webview -- --watch",
-    "package": "vsce package --out dist/",
+    "package": "npx vsce package --out dist/ --baseContentUrl https://github.com/cnsharp/ai-agents-terminal-vsc/blob/yolo --baseImagesUrl https://github.com/cnsharp/ai-agents-terminal-vsc/raw/yolo",
     "test": "node --test"
   },
   "dependencies": {

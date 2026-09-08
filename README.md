@@ -26,6 +26,11 @@ frames, type/member names, and URLs all become navigation links.
   input-tracking, so what you type in one tab is never linkified.
 - Agent configuration (skip flags / base args / resume flags, global YOLO & Resume defaults) lives in **VS Code Settings** — edit `yolo.agents` and the other `yolo.*` settings in `settings.json`; there is no in-panel Settings UI. (Internal extension IDs/settings keep the `yolo.` prefix — e.g. the view is `yolo.panel`, settings are `yolo.*` — while the product is branded **Agent YOLO**.)
 
+> **Panel location.** The Agents panel opens in the **Primary Side Bar** (the activity bar, on the left) by default.
+> To dock it on the right instead, right-click the panel header and choose **Move to Secondary Side Bar** —
+> VS Code remembers the choice. (Placing it on the right by default requires a proposed API that prevents the
+> extension from being installed/published, so the left is the shipped default.)
+
 ## Language support (install a language server to navigate type/member links)
 
 File-path links work out of the box (they are resolved on the filesystem). **Type and member links
