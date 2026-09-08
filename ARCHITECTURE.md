@@ -72,7 +72,7 @@ no IntelliJ-style "navigate to the exact member in the same file" heuristics bey
 ### 5.3 Tool window vs WebviewView — DONE
 The IntelliJ docked, always-available tool window is implemented as a `WebviewViewProvider`
 (`yolo.panel`) in an activity-bar container, so it docks and persists while hidden. The
-`AgentYOLO: Open Agents Panel` command focuses it. There is no separate Settings view — all configuration
+`Agent YOLO: Open Agents Panel` command focuses it. There is no separate Settings view — all configuration
 is edited directly in **VS Code Settings** (`yolo.*` in `settings.json`).
 
 ### 5.4 Link de-duplication / priority — DONE
