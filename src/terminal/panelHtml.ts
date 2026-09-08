@@ -15,7 +15,7 @@ export function renderPanelHtml(
     http-equiv="Content-Security-Policy"
     content="default-src 'none'; style-src ${cspSource} 'unsafe-inline'; img-src ${cspSource} https: data:; script-src ${cspSource};" />
   <link href="${styleUri}" rel="stylesheet" />
-  <title>Agent YOLO — AI Agents</title>
+  <title>Agent YOLO</title>
   <style>
     html, body { margin: 0; padding: 0; height: 100%; display: flex; flex-direction: column; overflow: hidden; background: var(--vscode-sideBar-background, #1e1e1e); color: var(--vscode-foreground, #cccccc); font-family: var(--vscode-font-family); }
     #bar { flex: 0 0 auto; display: flex; gap: 8px; align-items: center; padding: 6px 8px; background: var(--vscode-sideBar-background, #1e1e1e); border-bottom: 1px solid var(--vscode-panel-border, #333); }
