@@ -3,152 +3,344 @@
     "id": "claude",
     "displayName": "Claude Code",
     "command": "claude",
-    "baseArgs": "",
     "skipFlag": "--dangerously-skip-permissions",
     "resumeFlag": "-r",
+    "url": "https://claude.ai/",
+    "baseArgs": "",
     "iconFile": "claude.png"
   },
   {
     "id": "codex",
     "displayName": "Codex",
     "command": "codex",
-    "baseArgs": "",
-    "skipFlag": "--full-auto",
+    "skipFlag": "--yolo",
     "resumeFlag": "--resume",
+    "url": "https://openai.com/codex",
+    "baseArgs": "",
     "iconFile": "codex.png"
-  },
-  {
-    "id": "cline",
-    "displayName": "Cline",
-    "command": "cline",
-    "baseArgs": "--auto-approve true",
-    "skipFlag": "",
-    "resumeFlag": "--taskId",
-    "iconFile": "cline.png"
-  },
-  {
-    "id": "codebuddy",
-    "displayName": "CodeBuddy",
-    "command": "codebuddy",
-    "baseArgs": "",
-    "skipFlag": "-y",
-    "resumeFlag": "-r",
-    "iconFile": "codebuddy.png"
-  },
-  {
-    "id": "continue",
-    "displayName": "Continue",
-    "command": "cn",
-    "baseArgs": "",
-    "skipFlag": "--auto",
-    "iconFile": "continue.png"
-  },
-  {
-    "id": "copilot",
-    "displayName": "Copilot",
-    "command": "copilot",
-    "baseArgs": "",
-    "skipFlag": "--allow-all-tools --allow-all-paths",
-    "resumeFlag": "-r",
-    "iconFile": "copilot.png"
   },
   {
     "id": "cursor",
     "displayName": "Cursor",
     "command": "cursor-agent",
-    "baseArgs": "agent",
-    "skipFlag": "",
+    "skipFlag": "--force",
     "resumeFlag": "--resume",
+    "url": "https://cursor.com/",
+    "baseArgs": "",
     "iconFile": "cursor.png"
   },
   {
-    "id": "gemini",
-    "displayName": "Gemini",
-    "command": "gemini",
-    "baseArgs": "",
-    "skipFlag": "--yolo",
-    "iconFile": "gemini.png"
-  },
-  {
-    "id": "goose",
-    "displayName": "Goose",
-    "command": "goose",
-    "baseArgs": "",
-    "skipFlag": "",
+    "id": "copilot",
+    "displayName": "GitHub Copilot",
+    "command": "copilot",
+    "skipFlag": "--allow-all",
     "resumeFlag": "-r",
-    "iconFile": "goose.png"
-  },
-  {
-    "id": "hermes",
-    "displayName": "Hermes",
-    "command": "hermes",
+    "url": "https://github.com/features/copilot",
     "baseArgs": "",
-    "skipFlag": "",
-    "resumeFlag": "-r",
-    "iconFile": "hermes.png"
-  },
-  {
-    "id": "kilo",
-    "displayName": "Kilo Code",
-    "command": "kilo",
-    "baseArgs": "run",
-    "skipFlag": "--auto",
-    "iconFile": "kilo.png"
-  },
-  {
-    "id": "kimi",
-    "displayName": "Kimi",
-    "command": "kimi",
-    "baseArgs": "",
-    "skipFlag": "",
-    "resumeFlag": "-r",
-    "iconFile": "kimi.png"
-  },
-  {
-    "id": "openclaw",
-    "displayName": "OpenClaw",
-    "command": "openclaw",
-    "baseArgs": "",
-    "iconFile": "openclaw.png"
+    "iconFile": "copilot.png"
   },
   {
     "id": "opencode",
     "displayName": "OpenCode",
     "command": "opencode",
-    "baseArgs": "",
     "skipFlag": "--auto",
+    "resumeFlag": "",
+    "url": "https://opencode.ai/",
+    "baseArgs": "",
     "iconFile": "opencode.png"
   },
   {
-    "id": "pi",
-    "displayName": "Pi",
-    "command": "pi",
+    "id": "aider",
+    "displayName": "Aider",
+    "command": "aider",
+    "skipFlag": "--yes",
+    "resumeFlag": "",
+    "url": "https://aider.chat/",
     "baseArgs": "",
-    "skipFlag": "",
-    "resumeFlag": "-r",
-    "iconFile": "pi.png"
+    "iconFile": "aider.png"
   },
   {
-    "id": "qoder",
-    "displayName": "Qoder",
-    "command": "qoder",
+    "id": "cline",
+    "displayName": "Cline",
+    "command": "cline",
+    "skipFlag": "--auto-approve true",
+    "resumeFlag": "--taskId",
+    "url": "https://cline.bot/",
     "baseArgs": "",
-    "iconFile": "qoder.png"
+    "iconFile": "cline.png"
+  },
+  {
+    "id": "continue",
+    "displayName": "Continue",
+    "command": "cn",
+    "skipFlag": "--auto",
+    "resumeFlag": "",
+    "url": "https://continue.dev/",
+    "baseArgs": "",
+    "iconFile": "continue.png"
+  },
+  {
+    "id": "openclaw",
+    "displayName": "OpenClaw",
+    "command": "openclaw",
+    "skipFlag": "",
+    "resumeFlag": "",
+    "url": "https://openclaw.ai/",
+    "baseArgs": "",
+    "iconFile": "openclaw.png"
+  },
+  {
+    "id": "kiro",
+    "displayName": "Kiro",
+    "command": "kiro-cli",
+    "skipFlag": "--trust-all-tools",
+    "resumeFlag": "",
+    "url": "https://kiro.dev/",
+    "baseArgs": "",
+    "iconFile": "kiro.png"
+  },
+  {
+    "id": "goose",
+    "displayName": "Goose",
+    "command": "goose",
+    "skipFlag": "",
+    "resumeFlag": "-r",
+    "skipEnv": {
+      "name": "GOOSE_MODE",
+      "value": "auto"
+    },
+    "url": "https://block.github.io/goose/",
+    "baseArgs": "",
+    "iconFile": "goose.png"
+  },
+  {
+    "id": "crush",
+    "displayName": "Charm Crush",
+    "command": "crush",
+    "skipFlag": "--yolo",
+    "resumeFlag": "",
+    "url": "https://charm.sh/crush",
+    "baseArgs": "",
+    "iconFile": "crush.png"
+  },
+  {
+    "id": "amp",
+    "displayName": "Amp",
+    "command": "amp",
+    "skipFlag": "--dangerously-allow-all",
+    "resumeFlag": "",
+    "url": "https://ampcode.com/",
+    "baseArgs": "",
+    "iconFile": "amp.png"
+  },
+  {
+    "id": "kimi",
+    "displayName": "Kimi",
+    "command": "kimi",
+    "skipFlag": "--yolo",
+    "resumeFlag": "-r",
+    "url": "https://kimi.moonshot.cn/",
+    "baseArgs": "",
+    "iconFile": "kimi.png"
+  },
+  {
+    "id": "qwen-code",
+    "displayName": "Qwen Code",
+    "command": "qwen",
+    "skipFlag": "--approval-mode yolo",
+    "resumeFlag": "",
+    "url": "https://qwen.ai/qwencode",
+    "baseArgs": "",
+    "iconFile": "qwen-code.png"
   },
   {
     "id": "trae",
     "displayName": "TraeCode",
     "command": "traecli",
-    "baseArgs": "",
     "skipFlag": "",
     "resumeFlag": "--resume",
+    "url": "https://www.trae.ai/",
+    "baseArgs": "",
     "iconFile": "trae.png"
   },
   {
-    "id": "zcode",
-    "displayName": "ZCode",
-    "command": "zcode",
+    "id": "codebuddy",
+    "displayName": "CodeBuddy",
+    "command": "codebuddy",
+    "skipFlag": "-y",
+    "resumeFlag": "-r",
+    "url": "https://www.codebuddy.ai/",
     "baseArgs": "",
-    "iconFile": "zcode.png"
+    "iconFile": "codebuddy.png"
+  },
+  {
+    "id": "qoder",
+    "displayName": "Qoder",
+    "command": "qoder",
+    "skipFlag": "--dangerously-skip-permissions",
+    "resumeFlag": "",
+    "url": "https://qoder.com/",
+    "baseArgs": "",
+    "iconFile": "qoder.png"
+  },
+  {
+    "id": "devin",
+    "displayName": "Devin",
+    "command": "devin",
+    "skipFlag": "--permission-mode bypass",
+    "resumeFlag": "--resume",
+    "url": "https://devin.ai/",
+    "baseArgs": "",
+    "iconFile": "devin.png"
+  },
+  {
+    "id": "grok",
+    "displayName": "Grok",
+    "command": "grok",
+    "skipFlag": "--permission-mode bypassPermissions",
+    "resumeFlag": "--resume",
+    "url": "https://grok.com/",
+    "baseArgs": "",
+    "iconFile": "grok.png"
+  },
+  {
+    "id": "antigravity",
+    "displayName": "Antigravity",
+    "command": "agy",
+    "skipFlag": "--dangerously-skip-permissions",
+    "resumeFlag": "--conversation",
+    "url": "https://antigravity.google/",
+    "baseArgs": "",
+    "iconFile": "antigravity.png"
+  },
+  {
+    "id": "mistral-vibe",
+    "displayName": "Mistral Vibe",
+    "command": "vibe",
+    "skipFlag": "--agent auto-approve",
+    "resumeFlag": "",
+    "url": "https://mistral.ai/",
+    "baseArgs": "",
+    "iconFile": "mistral-vibe.png"
+  },
+  {
+    "id": "kilo",
+    "displayName": "Kilo Code",
+    "command": "kilo",
+    "skipFlag": "",
+    "resumeFlag": "",
+    "url": "https://kilocode.ai/",
+    "baseArgs": "",
+    "iconFile": "kilo.png"
+  },
+  {
+    "id": "hermes",
+    "displayName": "Hermes",
+    "command": "hermes",
+    "skipFlag": "--yolo",
+    "resumeFlag": "-r",
+    "url": "https://hermes-agent.nousresearch.com/",
+    "baseArgs": "",
+    "iconFile": "hermes.png"
+  },
+  {
+    "id": "pi",
+    "displayName": "Pi",
+    "command": "pi",
+    "skipFlag": "--approve",
+    "resumeFlag": "-r",
+    "url": "https://pi.ai/",
+    "baseArgs": "",
+    "iconFile": "pi.png"
+  },
+  {
+    "id": "droid",
+    "displayName": "Droid",
+    "command": "droid",
+    "skipFlag": "--auto high",
+    "resumeFlag": "--resume",
+    "url": "https://factory.ai/",
+    "baseArgs": "",
+    "iconFile": "droid.png"
+  },
+  {
+    "id": "aug",
+    "displayName": "Auggie",
+    "command": "auggie",
+    "skipFlag": "",
+    "resumeFlag": "",
+    "url": "https://augmentcode.com/",
+    "baseArgs": "",
+    "iconFile": "aug.png"
+  },
+  {
+    "id": "rovo",
+    "displayName": "Rovo Dev",
+    "command": "rovo",
+    "skipFlag": "--yolo",
+    "resumeFlag": "",
+    "url": "https://rovo.atlassian.com/",
+    "baseArgs": "",
+    "iconFile": "rovo.png"
+  },
+  {
+    "id": "prime-agent",
+    "displayName": "Prime Agent",
+    "command": "prime-agent",
+    "skipFlag": "",
+    "resumeFlag": "--resume",
+    "url": "https://www.primeintellect.ai/",
+    "baseArgs": "",
+    "iconFile": "prime-agent.png"
+  },
+  {
+    "id": "autohand",
+    "displayName": "Autohand",
+    "command": "autohand",
+    "skipFlag": "--unrestricted",
+    "resumeFlag": "",
+    "url": "https://autohand.ai/",
+    "baseArgs": "",
+    "iconFile": "autohand.png"
+  },
+  {
+    "id": "command-code",
+    "displayName": "Command Code",
+    "command": "command-code",
+    "skipFlag": "--yolo",
+    "resumeFlag": "",
+    "url": "https://commandcode.ai/",
+    "baseArgs": "",
+    "iconFile": "command-code.png"
+  },
+  {
+    "id": "ante",
+    "displayName": "Ante",
+    "command": "ante",
+    "skipFlag": "--yolo",
+    "resumeFlag": "",
+    "url": "https://antigma.ai/",
+    "baseArgs": "",
+    "iconFile": "ante.png"
+  },
+  {
+    "id": "codebuff",
+    "displayName": "Codebuff",
+    "command": "codebuff",
+    "skipFlag": "",
+    "resumeFlag": "",
+    "url": "https://codebuff.com/",
+    "baseArgs": "",
+    "iconFile": "codebuff.png"
+  },
+  {
+    "id": "omp",
+    "displayName": "OMP",
+    "command": "omp",
+    "skipFlag": "",
+    "resumeFlag": "--resume",
+    "url": "https://ohmyposh.dev/",
+    "baseArgs": "",
+    "iconFile": "omp.png"
   }
 ]
