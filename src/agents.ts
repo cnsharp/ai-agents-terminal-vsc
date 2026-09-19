@@ -56,6 +56,13 @@ export function initBuiltInAgents(ctx: vscode.ExtensionContext): void {
     builtInAgents = parsed as AgentConfig[];
   } catch (e) {
     console.error("[ai-agents-terminal] failed to load agents.json:", e);
+    // Surface it: with the built-in catalog gone, only agents configured in
+    // `aiAgentsTerminal.agents` remain, and the picker can come up empty with no
+    // obvious cause. A console error alone is easy to miss.
+    vscode.window.showWarningMessage(
+      "AI Agents Terminal: could not load the built-in agent catalog (agents.json). " +
+        "Only agents you added under 'aiAgentsTerminal.agents' will be available."
+    );
     builtInAgents = [];
   }
 }

@@ -137,9 +137,9 @@ function acquireFirstInstanceLock(ctx: vscode.ExtensionContext): boolean {
   return true;
 }
 
-/** Incrementally refresh the installed cache. Only the first instance probes,
- *  and only commands not already known-installed — keeping the cached state
- *  authoritative for every other window. Returns the final installed set. */
+/** Refresh the installed cache. Only the first instance within the lock TTL
+ *  probes, so N open windows don't each scan PATH on startup. Returns the final
+ *  installed set. */
 async function refreshInstalledCache(
   ctx: vscode.ExtensionContext,
   agents: AgentDef[]
@@ -149,17 +149,13 @@ async function refreshInstalledCache(
     return cached; // another window already owns the refresh this session
   }
 
-  // Probe only commands not yet known to be installed.
-  const unknown = agents.filter((a) => !cached.has(a.command));
-  if (unknown.length === 0) {
-    return cached;
-  }
-
-  const newlyInstalled = await detectInstalled(unknown);
-  const merged = new Set(cached);
-  newlyInstalled.forEach((a) => merged.add(a.command));
-  // Keep only commands that still exist in the current agent list.
-  const next = agents.map((a) => a.command).filter((c) => merged.has(c));
+  // Probe the FULL agent list, not just commands not yet known-installed. If we
+  // only ever added to the cache, an agent uninstalled between runs would stay
+  // listed as installed (and a later launch would fail with "not recognized").
+  // Re-probing everything keeps the cache honest; PATH resolution of ~tens of
+  // agents is cheap and only the first window pays for it per session.
+  const installed = await detectInstalled(agents);
+  const next = installed.map((a) => a.command);
   await writeInstalledCache(next);
   return new Set(next);
 }
