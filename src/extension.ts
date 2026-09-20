@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { resolveAgents, getAgentConfigWarnings, initBuiltInAgents, type AgentDef } from "./agents";
-import { isInstalled } from "./agentDetector";
+import { isInstalled, findExecutablePath, boostedPath } from "./agentDetector";
 
 // Single source of truth for the extension identity.
 // Keep this in sync with the `name` / `contributes.commands` in package.json.
@@ -83,8 +83,9 @@ function registerInstalledTerminalProfiles(ctx: vscode.ExtensionContext, install
         void ctx.globalState.update(LAST_AGENT_KEY, agent.command);
         return new vscode.TerminalProfile({
           name: `AI: ${agent.displayName}`,
-          shellPath: agent.command,
+          shellPath: findExecutablePath(agent.command) ?? agent.command,
           shellArgs,
+          env: { PATH: boostedPath() },
           iconPath: agentIcon(ctx, agent),
         });
       },
@@ -241,8 +242,9 @@ async function pickAndLaunch(ctx: vscode.ExtensionContext) {
     vscode.window
       .createTerminal({
         name: `AI: ${picked.agent.displayName}`,
-        shellPath: picked.agent.command,
+        shellPath: findExecutablePath(picked.agent.command) ?? picked.agent.command,
         shellArgs,
+        env: { PATH: boostedPath() },
         iconPath: agentIcon(ctx, picked.agent),
       })
       .show();
