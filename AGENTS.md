@@ -11,15 +11,15 @@ namespaces. Do **not** merge the branches or unify their namespaces — the dive
 | Branch | Product | UX | Settings namespace | Notes |
 |--------|---------|-----|--------------------|-------|
 | `main` | **AI Agents Terminal** (`ai-agents-terminal`) | Status-bar `🤖 AI Agents` button → Quick Pick launcher; dynamic `TerminalProfileProvider` registration | `aiAgentsTerminal.*` | Native terminal profiles; commands `toggleYoloMode` / `toggleResumeMode`. |
-| `yolo` | **YOLO** | Docked webview panel (`yolo.panel`) + in-panel Settings view (`yolo.settings`) | `yolo.*` | Frontend in `src/webview/` (bundled by esbuild → `media/dist/`); embedded xterm terminal. |
+| `yolo` | **YOLO** | Docked webview panel (`yolo.panel`) | `yolo.*` | Frontend in `src/webview/` (bundled by esbuild → `media/dist/`); embedded xterm terminal. No in-panel settings view — config lives in VS Code Settings (`yolo.*`). |
 
 ### Intentional differences (NOT bugs to "fix")
 - **Different settings namespaces**: `aiAgentsTerminal.*` vs `yolo.*`. Keep them separate.
 - **yolo-only settings**: `yolo.shell`, `yolo.shellArgs`, `yolo.permissionRules`, `yolo.agentBaseArgs`
   exist because the docked panel needs shell control / per-agent permission flags that the status-bar
   launcher does not. They have no `main` equivalent by design.
-- The status-bar product has no in-panel webview settings UI; it relies solely on VS Code Settings
-  (`contributes.configuration`).
+- Neither product has an in-panel webview settings UI; both rely solely on VS Code Settings
+  (`aiAgentsTerminal.*` / `yolo.*` via `contributes.configuration`). Changes apply on the next launch.
 
 ### Where they SHOULD stay consistent
 The **overlapping concepts** — the agents override list, Resume mode, YOLO/skip mode, and the installed

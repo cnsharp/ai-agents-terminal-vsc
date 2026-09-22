@@ -66,6 +66,11 @@ function buildShellArgs(agent: AgentDef, yolo: boolean, resume: boolean): string
 // changes, so we track the disposables to clear the previous round.
 let terminalProfileDisposables: vscode.Disposable[] = [];
 
+// The installed-agent set computed at activation (and on config change), shared
+// with the Quick Pick so it reflects the latest agents.json / PATH state instead
+// of re-reading a persisted cache that can lag behind an agents.json update.
+let currentInstalledSet: Set<string> = new Set();
+
 /** Register one TerminalProfileProvider for each installed agent. The provider's
  *  `id` doubles as the menu label (built-ins like "Git Bash" use display names
  *  too), and the profile is built live so YOLO mode is honoured at launch time. */
@@ -139,7 +144,8 @@ function acquireFirstInstanceLock(ctx: vscode.ExtensionContext): boolean {
 }
 
 /** Refresh the installed cache. Only the first instance within the lock TTL
- *  probes, so N open windows don't each scan PATH on startup. Returns the final
+ *  probes, so N open windows don't each scan PATH on startup; every other
+ *  window reuses the persisted cache for an instant result. Returns the final
  *  installed set. */
 async function refreshInstalledCache(
   ctx: vscode.ExtensionContext,
@@ -170,13 +176,12 @@ async function pickAndLaunch(ctx: vscode.ExtensionContext) {
   type AgentItem = { label: string; iconPath: vscode.Uri | vscode.ThemeIcon; agent: AgentDef };
   type SettingsItem = { label: string; description: string; iconPath: vscode.ThemeIcon; openSettings: true };
   const agents = resolveAgents();
-  // Render instantly from the cached installed set. Fall back to a live probe
-  // only when the cache is empty (e.g. first-ever run before the background
-  // refresh has finished).
-  const cache = readInstalledCache();
+  // Render instantly from the installed set computed at activation (and kept
+  // current on config changes). Fall back to a live probe only when it is empty
+  // (e.g. first-ever run before the background refresh has finished).
   const installed =
-    cache.size > 0
-      ? agents.filter((a) => cache.has(a.command))
+    currentInstalledSet.size > 0
+      ? agents.filter((a) => currentInstalledSet.has(a.command))
       : await detectInstalled(agents);
   let items: (AgentItem | SettingsItem)[] = installed.map((agent) => ({
     label: agent.displayName,
@@ -284,16 +289,28 @@ export async function activate(ctx: vscode.ExtensionContext) {
 
   const agents = resolveAgents();
 
-  // First VS Code instance (per restart) incrementally refreshes the installed
-  // cache; every other window reuses it so PATH is probed only once.
-  const installedSet = await refreshInstalledCache(ctx, agents);
-  const installedCount = installedSet.size;
-  const detectedCommands = [...installedSet];
+  // Seed the installed set from the persisted cache immediately, so the launcher
+  // renders instantly without waiting on a (possibly slow) PATH probe. The probe
+  // runs in the background below and updates currentInstalledSet + terminal
+  // profiles once it lands.
+  const cachedSet = readInstalledCache();
+  currentInstalledSet = new Set(cachedSet);
+  const installedCount = cachedSet.size;
+  const detectedCommands = [...cachedSet];
 
   // Register Terminal menu profiles for installed agents only (filters out the
   // ones not on PATH, which a static package.json contribution can't do).
-  const installedAgents = agents.filter((a) => installedSet.has(a.command));
+  const installedAgents = agents.filter((a) => cachedSet.has(a.command));
   registerInstalledTerminalProfiles(ctx, installedAgents);
+
+  // Background refresh: only the first instance within the lock TTL scans PATH
+  // and writes the cache; the result is pushed into currentInstalledSet and the
+  // terminal profiles are re-registered when it finishes. Non-blocking.
+  void refreshInstalledCache(ctx, agents).then((next) => {
+    currentInstalledSet = next;
+    const nextAgents = agents.filter((a) => next.has(a.command));
+    registerInstalledTerminalProfiles(ctx, nextAgents);
+  });
 
   // Reliable, always-visible launcher: a status-bar button.
   // (The Terminal `+` caret and `terminal/title` menus do NOT surface
@@ -402,6 +419,7 @@ export async function activate(ctx: vscode.ExtensionContext) {
       if (e.affectsConfiguration(`${CONFIG_SECTION}.agents`)) {
         void warnAgentAvailability();
         void refreshInstalledCache(ctx, resolveAgents()).then((next) => {
+          currentInstalledSet = next;
           const nextAgents = resolveAgents().filter((a) => next.has(a.command));
           registerInstalledTerminalProfiles(ctx, nextAgents);
         });
