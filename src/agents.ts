@@ -55,13 +55,14 @@ export function initBuiltInAgents(ctx: vscode.ExtensionContext): void {
     }
     builtInAgents = parsed as AgentConfig[];
   } catch (e) {
-    console.error("[ai-agents-terminal] failed to load agents.json:", e);
-    // Surface it: with the built-in catalog gone, only agents configured in
-    // `aiAgentsTerminal.agents` remain, and the picker can come up empty with no
-    // obvious cause. A console error alone is easy to miss.
-    vscode.window.showWarningMessage(
-      "AI Agents Terminal: could not load the built-in agent catalog (agents.json). " +
-        "Only agents you added under 'aiAgentsTerminal.agents' will be available."
+    // Log to the console (not a popup): with the built-in catalog gone, only agents
+    // configured in `aiAgentsTerminal.agents` remain, and the picker can come up empty
+    // with no obvious cause. A popup is avoided to match the YOLO product, where the
+    // agent-list failure is diagnostics-only (the scan time is unbounded, so a deadline
+    // would false-trip on a slow machine).
+    console.error(
+      "[ai-agents-terminal] the agent list failed to load: could not read agents.json.",
+      e
     );
     builtInAgents = [];
   }
