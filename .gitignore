@@ -8,3 +8,6 @@ out/
 
 # user workspace settings
 .vscode/
+!.vscode/
+!.vscode/launch.json
+!.vscode/tasks.json
