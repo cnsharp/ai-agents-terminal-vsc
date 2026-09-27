@@ -1,6 +1,13 @@
 import * as fs from "fs";
 import * as vscode from "vscode";
 
+// Settings namespace for this product's agent overrides. This is the ONLY line
+// that differs between the two product branches' copy of this file — see
+// AGENTS.md ("Different settings namespaces … Keep them separate"). Everything
+// else (AgentDef/AgentConfig shape, the agents.json loader, and the merge logic)
+// is shared verbatim between the branches.
+const CONFIG_SECTION = "aiAgentsTerminal";
+
 export interface AgentDef {
   readonly id: string;
   /** Binary launched in the terminal (also used for PATH detection). */
@@ -18,7 +25,7 @@ export interface AgentDef {
 
 /**
  * Shape of an entry in `agents.json` (the built-in catalog) and in the
- * `aiAgentsTerminal.agents` setting (user overrides / additions). Only
+ * `${CONFIG_SECTION}.agents` setting (user overrides / additions). Only
  * `command` is required; everything else overrides the built-in agent with the
  * same `command`, or defines a brand-new custom agent.
  */
@@ -55,13 +62,12 @@ export function initBuiltInAgents(ctx: vscode.ExtensionContext): void {
     }
     builtInAgents = parsed as AgentConfig[];
   } catch (e) {
-    // Log to the console (not a popup): with the built-in catalog gone, only agents
-    // configured in `aiAgentsTerminal.agents` remain, and the picker can come up empty
-    // with no obvious cause. A popup is avoided to match the YOLO product, where the
-    // agent-list failure is diagnostics-only (the scan time is unbounded, so a deadline
-    // would false-trip on a slow machine).
+    // Log to the console (not a popup): with the built-in catalog gone, only
+    // agents configured in `${CONFIG_SECTION}.agents` remain, and the picker can
+    // come up empty with no obvious cause. A popup is avoided — the scan time is
+    // unbounded, so a deadline would false-trip on a slow machine.
     console.error(
-      "[ai-agents-terminal] the agent list failed to load: could not read agents.json.",
+      `[${CONFIG_SECTION}] the agent list failed to load: could not read agents.json.`,
       e
     );
     builtInAgents = [];
@@ -80,7 +86,7 @@ export function getAgentConfigWarnings(): string[] {
 
 /**
  * Final agent list = built-ins from agents.json, merged with the user's
- * `aiAgentsTerminal.agents` setting. The setting is a list of overrides /
+ * `${CONFIG_SECTION}.agents` setting. The setting is a list of overrides /
  * additions:
  *   - an entry whose `command` (or `id`) matches a built-in overrides that
  *     built-in — only the fields you set replace the built-in's; `enabled:false`
@@ -91,7 +97,7 @@ export function getAgentConfigWarnings(): string[] {
 function buildAgents(): { agents: AgentDef[]; warnings: string[] } {
   const overrides =
     vscode.workspace
-      .getConfiguration("aiAgentsTerminal")
+      .getConfiguration(CONFIG_SECTION)
       .get<AgentConfig[]>("agents") ?? [];
 
   const warnings: string[] = [];
