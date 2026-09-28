@@ -28,6 +28,27 @@ import { execFileSync } from "child_process";
  * its spawned login shell often does NOT read the rc files that inject
  * nvm/fnm/brew/npm-global — which is why shell-based probing missed agents.
  */
+/** Best-effort resolution of the npm global bin directory (`npm prefix -g`/bin).
+ *  Agents installed via `npm i -g …` (e.g. codebuddy, pi, opencode) land here.
+ *  Many users add this dir to PATH only inside their shell rc, which a GUI-
+ *  launched VS Code login-shell probe does NOT source — so resolve it directly.
+ *  Cached + best-effort: if `npm` is unavailable we simply don't add it. */
+function npmGlobalBinDir(): string | undefined {
+  try {
+    const prefix = execFileSync("npm", ["prefix", "-g"], {
+      timeout: 5000,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    })
+      .trim()
+      .replace(/\r?\n.*$/, ""); // keep only the first line
+    if (!prefix) return undefined;
+    return path.join(prefix, "bin");
+  } catch {
+    return undefined;
+  }
+}
+
 function candidateBinDirs(): string[] {
   const home = os.homedir();
   const dirs: string[] = [
@@ -35,8 +56,13 @@ function candidateBinDirs(): string[] {
     "/usr/local/bin", // Intel Homebrew / manual installs
     path.join(home, ".local", "bin"),
     path.join(home, ".codebuddy", "bin"),
+    path.join(home, ".npm-global", "bin"), // default npm global prefix
     path.join(home, ".volta", "bin"),
   ];
+
+  // Resolve the actual npm global bin dir (covers custom `npm prefix -g`).
+  const npmBin = npmGlobalBinDir();
+  if (npmBin) dirs.push(npmBin);
 
   // nvm: pick the latest installed node version's bin.
   const nvmBase = path.join(home, ".nvm", "versions", "node");
