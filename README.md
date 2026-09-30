@@ -166,7 +166,7 @@ Commands:
 ### Project structure
 
 ```
-ai-agents-vsc/
+ai-agents-terminal-vsc/
 ├── package.json          # manifest: name=ai-agents-terminal, publisher=cnsharpstudio
 │                         #   contributes.configuration: yoloMode / agents / installedAgents
 │                         #   contributes.commands + keybindings

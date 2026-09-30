@@ -166,7 +166,7 @@
 ### 项目结构
 
 ```
-ai-agents-vsc/
+ai-agents-terminal-vsc/
 ├── package.json          # 清单：name=ai-agents-terminal, publisher=cnsharpstudio
 │                         #   contributes.configuration: yoloMode / agents / installedAgents
 │                         #   contributes.commands + keybindings
