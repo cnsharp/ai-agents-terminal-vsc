@@ -1,3 +1,4 @@
+import * as fs from "fs";
 import * as vscode from "vscode";
 import { resolveAgents, getAgentConfigWarnings, initBuiltInAgents, type AgentDef } from "./agents";
 import { isInstalled, findExecutablePath, boostedPath } from "./agentDetector";
@@ -20,15 +21,22 @@ function agentIcon(
   ctx: vscode.ExtensionContext,
   agent: AgentDef
 ): vscode.Uri | vscode.ThemeIcon {
-  if (!agent.iconFile) {
+  const icon = agent.icon;
+  if (!icon) {
     return new vscode.ThemeIcon("terminal");
   }
-  return vscode.Uri.joinPath(
-    ctx.extensionUri,
-    "media",
-    "agents",
-    agent.iconFile
-  );
+  // The registry stores only the icon filename (e.g. `claude.svg`); VSC ships PNGs only, so
+  // prefer `<id>.svg` and fall back to `<id>.png` under media/agents.
+  const base = icon.split("/").pop() ?? "";
+  const name = base.replace(/\.[^.]+$/, "");
+  const dir = vscode.Uri.joinPath(ctx.extensionUri, "media", "agents");
+  for (const ext of ["svg", "png"]) {
+    const candidate = vscode.Uri.joinPath(dir, `${name}.${ext}`);
+    if (fs.existsSync(candidate.fsPath)) {
+      return candidate;
+    }
+  }
+  return new vscode.ThemeIcon("terminal");
 }
 
 /** Agents from the config whose `command` is actually installed. Runs all

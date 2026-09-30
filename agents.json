@@ -1,106 +1,160 @@
 [
   {
     "id": "claude",
+    "baseArgs": "",
     "displayName": "Claude Code",
     "command": "claude",
     "skipFlag": "--dangerously-skip-permissions",
     "resumeFlag": "-r",
+    "icon": "claude.svg",
     "url": "https://claude.ai/",
-    "baseArgs": "",
-    "iconFile": "claude.png"
+    "install": {
+      "type": "shell",
+      "cmd": "curl -fsSL https://claude.ai/install.sh | bash",
+      "cmdWin": "irm https://claude.ai/install.ps1 | iex",
+      "updateCmd": "claude update"
+    }
   },
   {
     "id": "codex",
+    "baseArgs": "",
     "displayName": "Codex",
     "command": "codex",
     "skipFlag": "--yolo",
-    "resumeFlag": "--resume",
+    "resumeFlag": "resume --last",
+    "icon": "codex.svg",
     "url": "https://openai.com/codex",
-    "baseArgs": "",
-    "iconFile": "codex.png"
+    "install": {
+      "type": "shell",
+      "cmd": "curl -fsSL https://chatgpt.com/codex/install.sh | sh",
+      "cmdWin": "powershell -ExecutionPolicy ByPass -c \"irm https://chatgpt.com/codex/install.ps1 | iex\"",
+      "updateCmd": "npm install -g @openai/codex@latest"
+    }
   },
   {
     "id": "cursor",
+    "baseArgs": "",
     "displayName": "Cursor",
-    "command": "cursor-agent",
+    "command": "agent",
     "skipFlag": "--force",
     "resumeFlag": "--resume",
-    "url": "https://cursor.com/",
-    "baseArgs": "",
-    "iconFile": "cursor.png"
+    "icon": "cursor.svg",
+    "url": "https://cursor.com/cli",
+    "install": {
+      "type": "shell",
+      "cmd": "curl https://cursor.com/install -fsS | bash",
+      "cmdWin": "irm 'https://cursor.com/install?win32=true' | iex"
+    }
   },
   {
     "id": "copilot",
+    "baseArgs": "",
     "displayName": "GitHub Copilot",
     "command": "copilot",
     "skipFlag": "--allow-all",
     "resumeFlag": "-r",
+    "icon": "copilot.svg",
     "url": "https://github.com/features/copilot",
-    "baseArgs": "",
-    "iconFile": "copilot.png"
+    "install": {
+      "type": "shell",
+      "cmd": "curl -fsSL https://gh.io/copilot-install | bash",
+      "cmdWin": "winget install GitHub.Copilot",
+      "updateCmd": "copilot update"
+    }
   },
   {
     "id": "opencode",
+    "baseArgs": "",
     "displayName": "OpenCode",
     "command": "opencode",
     "skipFlag": "--auto",
     "resumeFlag": "",
+    "icon": "opencode.png",
     "url": "https://opencode.ai/",
-    "baseArgs": "",
-    "iconFile": "opencode.png"
+    "install": {
+      "type": "shell",
+      "cmd": "curl -fsSL https://opencode.ai/install | bash",
+      "cmdWin": "wsl -e bash -c \"curl -fsSL https://opencode.ai/install | bash\""
+    }
   },
   {
     "id": "aider",
+    "baseArgs": "",
     "displayName": "Aider",
     "command": "aider",
     "skipFlag": "--yes",
     "resumeFlag": "",
+    "icon": "aider.svg",
     "url": "https://aider.chat/",
-    "baseArgs": "",
-    "iconFile": "aider.png"
+    "install": {
+      "type": "pip",
+      "pkg": "aider-chat"
+    }
   },
   {
     "id": "cline",
+    "baseArgs": "",
     "displayName": "Cline",
     "command": "cline",
     "skipFlag": "--auto-approve true",
     "resumeFlag": "--taskId",
+    "icon": "cline.svg",
     "url": "https://cline.bot/",
-    "baseArgs": "",
-    "iconFile": "cline.png"
+    "install": {
+      "type": "npm",
+      "pkg": "cline"
+    }
   },
   {
     "id": "continue",
+    "baseArgs": "",
     "displayName": "Continue",
     "command": "cn",
     "skipFlag": "--auto",
     "resumeFlag": "",
+    "icon": "continue.svg",
     "url": "https://continue.dev/",
-    "baseArgs": "",
-    "iconFile": "continue.png"
+    "install": {
+      "type": "shell",
+      "cmd": "curl -fsSL https://raw.githubusercontent.com/continuedev/continue/main/extensions/cli/scripts/install.sh | bash",
+      "cmdWin": "irm https://raw.githubusercontent.com/continuedev/continue/main/extensions/cli/scripts/install.ps1 | iex"
+    }
   },
   {
     "id": "openclaw",
+    "baseArgs": "",
     "displayName": "OpenClaw",
     "command": "openclaw",
     "skipFlag": "",
     "resumeFlag": "",
+    "icon": "openclaw.svg",
     "url": "https://openclaw.ai/",
-    "baseArgs": "",
-    "iconFile": "openclaw.png"
+    "install": {
+      "type": "shell",
+      "cmd": "curl -fsSL https://openclaw.ai/install.sh | bash",
+      "cmdWin": "iwr -useb https://openclaw.ai/install.ps1 | iex",
+      "updateCmd": "openclaw update"
+    }
   },
   {
     "id": "kiro",
+    "baseArgs": "",
     "displayName": "Kiro",
     "command": "kiro-cli",
     "skipFlag": "--trust-all-tools",
     "resumeFlag": "",
+    "icon": "kiro.svg",
     "url": "https://kiro.dev/",
-    "baseArgs": "",
-    "iconFile": "kiro.png"
+    "install": {
+      "type": "shell",
+      "cmd": "curl -fsSL https://cli.kiro.dev/install | bash",
+      "cmdWin": "irm 'https://cli.kiro.dev/install.ps1' | iex",
+      "updateCmd": "kiro-cli update"
+    }
   },
   {
     "id": "goose",
+    "baseArgs": "",
     "displayName": "Goose",
     "command": "goose",
     "skipFlag": "",
@@ -109,238 +163,345 @@
       "name": "GOOSE_MODE",
       "value": "auto"
     },
+    "icon": "goose.svg",
     "url": "https://block.github.io/goose/",
-    "baseArgs": "",
-    "iconFile": "goose.png"
+    "install": {
+      "type": "brew",
+      "pkg": "block-goose-cli"
+    }
   },
   {
     "id": "crush",
+    "baseArgs": "",
     "displayName": "Charm Crush",
     "command": "crush",
     "skipFlag": "--yolo",
     "resumeFlag": "",
+    "icon": "crush.png",
     "url": "https://charm.sh/crush",
-    "baseArgs": "",
-    "iconFile": "crush.png"
+    "install": {
+      "type": "npm",
+      "pkg": "@charmland/crush"
+    }
   },
   {
     "id": "amp",
+    "baseArgs": "",
     "displayName": "Amp",
     "command": "amp",
     "skipFlag": "--dangerously-allow-all",
     "resumeFlag": "",
+    "icon": "amp.svg",
     "url": "https://ampcode.com/",
-    "baseArgs": "",
-    "iconFile": "amp.png"
+    "install": {
+      "type": "shell",
+      "cmd": "curl -fsSL https://ampcode.com/install.sh | bash",
+      "cmdWin": "powershell -c \"irm https://ampcode.com/install.ps1 | iex\""
+    }
   },
   {
     "id": "kimi",
+    "baseArgs": "",
     "displayName": "Kimi",
     "command": "kimi",
     "skipFlag": "--yolo",
     "resumeFlag": "-r",
+    "icon": "kimi.png",
     "url": "https://kimi.moonshot.cn/",
-    "baseArgs": "",
-    "iconFile": "kimi.png"
+    "install": {
+      "type": "npm",
+      "pkg": "@moonshot-ai/kimi-code"
+    }
   },
   {
     "id": "qwen-code",
+    "baseArgs": "",
     "displayName": "Qwen Code",
     "command": "qwen",
     "skipFlag": "--approval-mode yolo",
     "resumeFlag": "",
+    "icon": "qwen-code.png",
     "url": "https://qwen.ai/qwencode",
-    "baseArgs": "",
-    "iconFile": "qwen-code.png"
+    "install": {
+      "type": "npm",
+      "pkg": "@qwen-code/qwen-code"
+    }
   },
   {
     "id": "trae",
+    "baseArgs": "",
     "displayName": "TraeCode",
     "command": "traecli",
     "skipFlag": "",
     "resumeFlag": "--resume",
+    "icon": "trae.svg",
     "url": "https://www.trae.ai/",
-    "baseArgs": "",
-    "iconFile": "trae.png"
+    "install": {
+      "type": "shell",
+      "cmd": "sh -c \"$(curl -L https://trae.cn/trae-cli/install.sh)\"",
+      "cmdWin": "irm https://trae.cn/trae-cli/install.ps1 | iex"
+    }
   },
   {
     "id": "codebuddy",
+    "baseArgs": "",
     "displayName": "CodeBuddy",
     "command": "codebuddy",
     "skipFlag": "-y",
     "resumeFlag": "-r",
+    "icon": "codebuddy.svg",
     "url": "https://www.codebuddy.ai/",
-    "baseArgs": "",
-    "iconFile": "codebuddy.png"
+    "install": {
+      "type": "npm",
+      "pkg": "@tencent-ai/codebuddy-code"
+    }
   },
   {
     "id": "qoder",
+    "baseArgs": "",
     "displayName": "Qoder",
     "command": "qoder",
     "skipFlag": "--dangerously-skip-permissions",
     "resumeFlag": "",
+    "icon": "qoder.svg",
     "url": "https://qoder.com/",
-    "baseArgs": "",
-    "iconFile": "qoder.png"
+    "install": {
+      "type": "npm",
+      "pkg": "@qoder-ai/qodercli"
+    }
   },
   {
     "id": "devin",
+    "baseArgs": "",
     "displayName": "Devin",
     "command": "devin",
     "skipFlag": "--permission-mode bypass",
     "resumeFlag": "--resume",
+    "icon": "devin.svg",
     "url": "https://devin.ai/",
-    "baseArgs": "",
-    "iconFile": "devin.png"
+    "install": {
+      "type": "shell",
+      "cmd": "curl -fsSL https://cli.devin.ai/install.sh | bash",
+      "cmdWin": "irm https://static.devin.ai/cli/setup.ps1 | iex"
+    }
   },
   {
     "id": "grok",
+    "baseArgs": "",
     "displayName": "Grok",
     "command": "grok",
     "skipFlag": "--permission-mode bypassPermissions",
     "resumeFlag": "--resume",
+    "icon": "grok.svg",
     "url": "https://grok.com/",
-    "baseArgs": "",
-    "iconFile": "grok.png"
+    "install": {
+      "type": "npm",
+      "pkg": "@xai-official/grok"
+    }
   },
   {
     "id": "antigravity",
+    "baseArgs": "",
     "displayName": "Antigravity",
     "command": "agy",
     "skipFlag": "--dangerously-skip-permissions",
     "resumeFlag": "--conversation",
+    "icon": "antigravity.png",
     "url": "https://antigravity.google/",
-    "baseArgs": "",
-    "iconFile": "antigravity.png"
+    "install": {
+      "type": "shell",
+      "cmd": "curl -fsSL https://antigravity.google/cli/install.sh | bash",
+      "cmdWin": "irm https://antigravity.google/cli/install.ps1 | iex",
+      "updateCmd": "agy update"
+    }
   },
   {
     "id": "mistral-vibe",
+    "baseArgs": "",
     "displayName": "Mistral Vibe",
     "command": "vibe",
     "skipFlag": "--agent auto-approve",
     "resumeFlag": "",
+    "icon": "mistral-vibe.svg",
     "url": "https://mistral.ai/",
-    "baseArgs": "",
-    "iconFile": "mistral-vibe.png"
+    "install": {
+      "type": "pip",
+      "pkg": "mistral-vibe"
+    }
   },
   {
     "id": "kilo",
+    "baseArgs": "",
     "displayName": "Kilo Code",
     "command": "kilo",
     "skipFlag": "",
     "resumeFlag": "",
+    "icon": "kilo.svg",
     "url": "https://kilocode.ai/",
-    "baseArgs": "",
-    "iconFile": "kilo.png"
+    "install": {
+      "type": "npm",
+      "pkg": "@kilocode/cli"
+    }
   },
   {
     "id": "hermes",
+    "baseArgs": "",
     "displayName": "Hermes",
     "command": "hermes",
     "skipFlag": "--yolo",
     "resumeFlag": "-r",
+    "icon": "hermes.png",
     "url": "https://hermes-agent.nousresearch.com/",
-    "baseArgs": "",
-    "iconFile": "hermes.png"
+    "install": {
+      "type": "shell",
+      "cmd": "curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash",
+      "cmdWin": "iex (irm https://hermes-agent.nousresearch.com/install.ps1)",
+      "updateCmd": "hermes update"
+    }
   },
   {
     "id": "pi",
+    "baseArgs": "",
     "displayName": "Pi",
     "command": "pi",
     "skipFlag": "--approve",
     "resumeFlag": "-r",
+    "icon": "pi.svg",
     "url": "https://pi.dev/",
-    "baseArgs": "",
-    "iconFile": "pi.png"
+    "install": {
+      "type": "npm",
+      "pkg": "@earendil-works/pi-coding-agent"
+    }
   },
   {
     "id": "droid",
+    "baseArgs": "",
     "displayName": "Droid",
     "command": "droid",
     "skipFlag": "--auto high",
     "resumeFlag": "--resume",
+    "icon": "droid.svg",
     "url": "https://factory.ai/",
-    "baseArgs": "",
-    "iconFile": "droid.png"
+    "install": {
+      "type": "shell",
+      "cmd": "curl -fsSL https://app.factory.ai/cli | sh",
+      "cmdWin": "irm https://app.factory.ai/cli/windows | iex"
+    }
   },
   {
     "id": "aug",
+    "baseArgs": "",
     "displayName": "Auggie",
     "command": "auggie",
     "skipFlag": "",
     "resumeFlag": "",
+    "icon": "aug.svg",
     "url": "https://augmentcode.com/",
-    "baseArgs": "",
-    "iconFile": "aug.png"
+    "install": {
+      "type": "npm",
+      "pkg": "@augmentcode/auggie"
+    }
   },
   {
     "id": "rovo",
+    "baseArgs": "",
     "displayName": "Rovo Dev",
     "command": "rovo",
     "skipFlag": "--yolo",
     "resumeFlag": "",
+    "icon": "rovo.svg",
     "url": "https://rovo.atlassian.com/",
-    "baseArgs": "",
-    "iconFile": "rovo.png"
+    "install": {
+      "type": "url",
+      "url": "https://rovo.atlassian.com/"
+    }
   },
   {
     "id": "prime-agent",
+    "baseArgs": "",
     "displayName": "Prime Agent",
     "command": "prime-agent",
     "skipFlag": "",
     "resumeFlag": "--resume",
+    "icon": "prime-agent.png",
     "url": "https://www.primeintellect.ai/",
-    "baseArgs": "",
-    "iconFile": "prime-agent.png"
+    "install": {
+      "type": "shell",
+      "cmd": "curl --proto '=https' --proto-redir '=https' -fsSL https://app.primeintellect.ai/prime-agent/install.sh | sh",
+      "cmdWin": "wsl -e bash -c \"curl --proto '=https' --proto-redir '=https' -fsSL https://app.primeintellect.ai/prime-agent/install.sh | sh\""
+    }
   },
   {
     "id": "autohand",
+    "baseArgs": "",
     "displayName": "Autohand",
     "command": "autohand",
     "skipFlag": "--unrestricted",
     "resumeFlag": "",
+    "icon": "autohand.svg",
     "url": "https://autohand.ai/",
-    "baseArgs": "",
-    "iconFile": "autohand.png"
+    "install": {
+      "type": "npm",
+      "pkg": "autohand-cli"
+    }
   },
   {
     "id": "command-code",
+    "baseArgs": "",
     "displayName": "Command Code",
     "command": "command-code",
     "skipFlag": "--yolo",
     "resumeFlag": "",
+    "icon": "command-code.svg",
     "url": "https://commandcode.ai/",
-    "baseArgs": "",
-    "iconFile": "command-code.png"
+    "install": {
+      "type": "npm",
+      "pkg": "command-code"
+    }
   },
   {
     "id": "ante",
+    "baseArgs": "",
     "displayName": "Ante",
     "command": "ante",
     "skipFlag": "--yolo",
     "resumeFlag": "",
+    "icon": "ante.svg",
     "url": "https://antigma.ai/",
-    "baseArgs": "",
-    "iconFile": "ante.png"
+    "install": {
+      "type": "shell",
+      "cmd": "curl -fsSL https://ante.run/install.sh | bash",
+      "cmdWin": "irm https://ante.run/install.ps1 | iex"
+    }
   },
   {
     "id": "codebuff",
+    "baseArgs": "",
     "displayName": "Codebuff",
     "command": "codebuff",
     "skipFlag": "",
     "resumeFlag": "",
+    "icon": "codebuff.png",
     "url": "https://codebuff.com/",
-    "baseArgs": "",
-    "iconFile": "codebuff.png"
+    "install": {
+      "type": "npm",
+      "pkg": "codebuff"
+    }
   },
   {
     "id": "omp",
+    "baseArgs": "",
     "displayName": "OMP",
     "command": "omp",
     "skipFlag": "",
     "resumeFlag": "--resume",
+    "icon": "omp.svg",
     "url": "https://ohmyposh.dev/",
-    "baseArgs": "",
-    "iconFile": "omp.png"
+    "install": {
+      "type": "shell",
+      "cmd": "curl -s https://ohmyposh.dev/install.sh | bash -s",
+      "cmdWin": "winget install JanDeDobbeleer.OhMyPosh -s winget",
+      "updateCmd": "oh-my-posh upgrade"
+    }
   }
 ]

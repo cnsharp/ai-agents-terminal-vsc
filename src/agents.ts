@@ -19,8 +19,10 @@ export interface AgentDef {
   readonly skipFlag?: string;
   /** Flag appended when "Resume mode" is on, to continue the most recent session. */
   readonly resumeFlag?: string;
-  /** Icon filename under media/agents. Optional — falls back to a default terminal icon. */
-  readonly iconFile?: string;
+  /** Bundled icon filename (e.g. `claude.svg`); the registry stores just the filename because each
+   *  end keeps its icons under a different directory. Optional — falls back to a default terminal
+   *  icon. The loader maps it onto the bundled media/agents assets (svg→png fallback). */
+  readonly icon?: string;
 }
 
 /**
@@ -34,6 +36,8 @@ export interface AgentConfig {
   displayName?: string;
   baseArgs?: string;
   skipFlag?: string;
+  icon?: string;
+  /** @deprecated use `icon` (filename); kept for backward-compatible user overrides that pass a full path. */
   iconFile?: string;
   /** Flag appended when "Resume mode" is on (e.g. `-r`, `--resume`). */
   resumeFlag?: string;
@@ -136,7 +140,7 @@ function buildAgents(): { agents: AgentDef[]; warnings: string[] } {
       baseArgs: cfg.baseArgs ?? "",
       skipFlag: cfg.skipFlag,
       resumeFlag: cfg.resumeFlag,
-      iconFile: cfg.iconFile,
+      icon: cfg.icon ?? cfg.iconFile,
     });
   };
 
