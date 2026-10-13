@@ -122,6 +122,23 @@
 | ante | Ante | `ante` | <a href="https://antigma.ai/"><img src="media/agents/ante.png" height="20" alt="Ante"></a> |
 | codebuff | Codebuff | `codebuff` | <a href="https://codebuff.com/"><img src="media/agents/codebuff.png" height="20" alt="Codebuff"></a> |
 | omp | OMP | `omp` | <a href="https://ohmyposh.dev/"><img src="media/agents/omp.png" height="20" alt="OMP"></a> |
+| agoragentic | Agoragentic | `agoragentic-mcp` | <a href="https://agoragentic.com"><img src="media/agents/agoragentic.png" height="20" alt="Agoragentic"></a> |
+| cortex-code | Cortex Code | `cortex` | <a href="https://docs.snowflake.com/en/user-guide/cortex-code/cortex-code"><img src="media/agents/cortex-code.png" height="20" alt="Cortex Code"></a> |
+| corust-agent | Corust Agent | `corust` | <a href="https://corust.ai/"><img src="media/agents/corust-agent.png" height="20" alt="Corust Agent"></a> |
+| crow-cli | Crow CLI | `crow-cli` | <a href="https://crow-ai.dev"><img src="media/agents/crow-cli.png" height="20" alt="Crow CLI"></a> |
+| deepagents | DeepAgents | `deepagents-acp` | <a href="https://docs.langchain.com/oss/javascript/deepagents/overview"><img src="media/agents/deepagents.png" height="20" alt="DeepAgents"></a> |
+| dirac | Dirac | `dirac` | <a href="https://dirac.run"><img src="media/agents/dirac.png" height="20" alt="Dirac"></a> |
+| dimcode | DimCode | `dim` | <a href="https://dimcode.dev/docs/acp.html"><img src="media/agents/dimcode.png" height="20" alt="DimCode"></a> |
+| fast-agent | Fast Agent | `fast-agent` | <a href="https://fast-agent.ai"><img src="media/agents/fast-agent.png" height="20" alt="Fast Agent"></a> |
+| glm-agent | GLM Agent | `glm-acp-agent` | <a href="https://github.com/stefandevo/glm-acp-agent"><img src="media/agents/glm-agent.png" height="20" alt="GLM Agent"></a> |
+| harn | Harn | `harn` | <a href="https://harnlang.com"><img src="media/agents/harn.png" height="20" alt="Harn"></a> |
+| junie | Junie | `junie` | <a href="https://junie.jetbrains.com"><img src="media/agents/junie.png" height="20" alt="Junie"></a> |
+| minion-code | Minion Code | `minion-code` | <a href="https://github.com/femto/minion-code"><img src="media/agents/minion-code.png" height="20" alt="Minion Code"></a> |
+| nova | Nova | `nova` | <a href="https://www.compassap.ai/portfolio/nova.html"><img src="media/agents/nova.png" height="20" alt="Nova"></a> |
+| poolside | Poolside | `pool` | <a href="https://poolside.ai"><img src="media/agents/poolside.png" height="20" alt="Poolside"></a> |
+| sigit | siGit Code | `sigit` | <a href="https://smbcloud.xyz"><img src="media/agents/sigit.png" height="20" alt="siGit Code"></a> |
+| stakpak | Stakpak | `stakpak` | <a href="https://stakpak.dev"><img src="media/agents/stakpak.png" height="20" alt="Stakpak"></a> |
+| vtcode | VT Code | `vtcode` | <a href="https://github.com/vinhnx/VTCode"><img src="media/agents/vtcode.png" height="20" alt="VT Code"></a> |
 
 > logo 位于 `media/agents/`（PNG）。下拉只显示 displayName，不显示 command / id。
 
