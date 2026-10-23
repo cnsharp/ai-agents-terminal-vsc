@@ -127,7 +127,11 @@ function buildAgents(): { agents: AgentDef[]; warnings: string[] } {
     if (seen.name.has(name)) dups.push(`name "${name}"`);
     if (seen.id.has(id)) dups.push(`id "${id}"`);
     if (dups.length > 0) {
-      warnings.push(`Agent ignored (duplicate ${dups.join(", ")}).`);
+      warnings.push(
+        `Agent ignored (duplicate ${dups.join(", ")}). ` +
+          `To customize a built-in instead of adding a duplicate, set the same "id" as the built-in (e.g. "cursor"); ` +
+          `to add a separate agent, use a unique "command" and "displayName".`
+      );
       return;
     }
     seen.command.add(cfg.command);

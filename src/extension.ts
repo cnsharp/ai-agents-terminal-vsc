@@ -383,14 +383,13 @@ export async function activate(ctx: vscode.ExtensionContext) {
 
   refresh();
 
-  // Structural config problems (duplicate command / name / id) — instant, runs
+  // Structural config problems (duplicate command / name / id) — logged to the
+  // console only (no popup), consistent with the availability check below. Runs
   // on any change to the extension's settings.
   const warnAgentConfig = () => {
     const warnings = getAgentConfigWarnings();
     if (warnings.length > 0) {
-      vscode.window.showWarningMessage(
-        `AI Agents Terminal: ${warnings.join(" ")}`
-      );
+      console.warn(`AI Agents Terminal: ${warnings.join(" ")}`);
     }
   };
 
