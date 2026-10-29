@@ -245,3 +245,10 @@ export function canExecute(command: string): boolean {
 export function isInstalled(command: string): boolean {
   return canExecute(command);
 }
+
+
+/** Clear the detection cache (e.g. after a head-less install) so a freshly
+ *  installed binary is re-probed on the next canExecute/resolvePath call. */
+export function invalidateExecutableCache(): void {
+  cache.clear();
+}

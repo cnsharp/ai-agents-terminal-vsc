@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as vscode from "vscode";
 import { resolveAgents, getAgentConfigWarnings, initBuiltInAgents, type AgentDef } from "./agents";
+import { AgentManagerPanel } from "./manage/managerPanel";
 import { isInstalled, findExecutablePath, boostedPath } from "./agentDetector";
 
 // Single source of truth for the extension identity.
@@ -183,6 +184,7 @@ async function pickAndLaunch(ctx: vscode.ExtensionContext) {
 
   type AgentItem = { label: string; iconPath: vscode.Uri | vscode.ThemeIcon; agent: AgentDef };
   type SettingsItem = { label: string; description: string; iconPath: vscode.ThemeIcon; openSettings: true };
+  type ManageItem = { label: string; description: string; iconPath: vscode.ThemeIcon; openManager: true };
   const agents = resolveAgents();
   // Render instantly from the installed set computed at activation (and kept
   // current on config changes). Fall back to a live probe only when it is empty
@@ -191,7 +193,7 @@ async function pickAndLaunch(ctx: vscode.ExtensionContext) {
     currentInstalledSet.size > 0
       ? agents.filter((a) => currentInstalledSet.has(a.command))
       : await detectInstalled(agents);
-  let items: (AgentItem | SettingsItem)[] = installed.map((agent) => ({
+  let items: (AgentItem | SettingsItem | ManageItem)[] = installed.map((agent) => ({
     label: agent.displayName,
     iconPath: agentIcon(ctx, agent),
     agent,
@@ -204,6 +206,14 @@ async function pickAndLaunch(ctx: vscode.ExtensionContext) {
         ")."
     );
   }
+
+  // Manage Agents entry (second-to-last): opens the Agent Manager webview page.
+  items.push({
+    label: "Manage Agents",
+    description: "Install / upgrade agents",
+    iconPath: new vscode.ThemeIcon("robot"),
+    openManager: true,
+  });
 
   // Settings entry pinned to the bottom of the list.
   items.push({
@@ -220,7 +230,7 @@ async function pickAndLaunch(ctx: vscode.ExtensionContext) {
     : undefined;
 
   // createQuickPick (not showQuickPick) is used so we can pre-select via activeItems.
-  const qp = vscode.window.createQuickPick<AgentItem | SettingsItem>();
+  const qp = vscode.window.createQuickPick<AgentItem | SettingsItem | ManageItem>();
   qp.items = items;
   qp.matchOnDescription = true;
   qp.placeholder = yolo
@@ -242,6 +252,13 @@ async function pickAndLaunch(ctx: vscode.ExtensionContext) {
         "workbench.action.openSettings",
         `@ext:${EXTENSION_FULL_ID}`
       );
+      qp.dispose();
+      return;
+    }
+
+    // Manage Agents item: open the Agent Manager webview page.
+    if ("openManager" in picked) {
+      AgentManagerPanel.show(ctx.extensionUri);
       qp.dispose();
       return;
     }
