@@ -219,7 +219,9 @@ export class AgentManagerPanel {
     this.setBusy(agentId, label);
     try {
       const command = upgrade ? buildUpdateCommand(def.install) : buildInstallCommand(def.install);
-      if (!command || !installAutomatableOnPlatform(def.install)) {
+      // The agent's own updateCmd is first-class: an upgrade runs it regardless of install type.
+      const selfUpdate = upgrade && !!def.install.updateCmd;
+      if (!command || (!selfUpdate && !installAutomatableOnPlatform(def.install))) {
         // `url` (or unknown / non-runnable) spec: nothing to run — open the download page instead.
         const site = def.url ?? def.install.url ?? "";
         if (!site) {

@@ -71,12 +71,13 @@ export function buildInstallCommand(spec: InstallSpec): string {
 }
 
 /**
- * Mutating upgrade command. For `shell` agents that declare `updateCmd`, run that (the agent's
- * own self-update subcommand, e.g. `claude update`); otherwise fall back to re-running the
- * installer, which also fetches the latest version. For `url` type this returns the URL
- * (callers open the site instead of running a command).
+ * Mutating upgrade command. A declared `updateCmd` (the agent's own self-update subcommand,
+ * e.g. `claude update`) is first-class and wins for every install type; otherwise use the
+ * package manager, or for `shell` re-run the installer, which also fetches the latest version.
+ * For `url` type this returns the URL (callers open the site instead of running a command).
  */
 export function buildUpdateCommand(spec: InstallSpec): string {
+  if (spec.updateCmd) return spec.updateCmd;
   switch (spec.type) {
     case "npm":
       return `npm install -g '${escapeArg(spec.pkg ?? "")}'`;
@@ -85,7 +86,6 @@ export function buildUpdateCommand(spec: InstallSpec): string {
     case "brew":
       return `brew upgrade '${escapeArg(spec.pkg ?? "")}'`;
     case "shell":
-      if (spec.updateCmd) return spec.updateCmd;
       return process.platform === "win32" && spec.cmdWin ? spec.cmdWin : (spec.cmd ?? "");
     default:
       return spec.url ?? "";
