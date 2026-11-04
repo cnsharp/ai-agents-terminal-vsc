@@ -223,7 +223,7 @@ export class AgentManagerPanel {
       const selfUpdate = upgrade && !!def.install.updateCmd;
       if (!command || (!selfUpdate && !installAutomatableOnPlatform(def.install))) {
         // `url` (or unknown / non-runnable) spec: nothing to run — open the download page instead.
-        const site = def.url ?? def.install.url ?? "";
+        const site = def.install.url ?? def.url ?? "";
         if (!site) {
           this.postResult(agentId, false, t("status.noInstallUrl", def.displayName));
           return;

@@ -429,14 +429,30 @@ async function fetchText(url: string): Promise<string | null> {
 }
 
 /** Latest version scraped from a web page that has no structured API. Applies `pattern` and
- *  returns the first capture group (or the whole match). Used for date-versioned tools like
- *  Cursor whose install page is server-rendered with the current version. */
+ *  returns the highest semver among all capture groups (or whole matches) — a page may list many
+ *  versions (e.g. a changelog jsonl), so the newest, not the first, must be reported. For
+ *  non-semver schemes (dates, build ids) falls back to the first match to preserve prior behavior.
+ *  Used for date-versioned tools like Cursor whose install page is server-rendered. */
 async function webLatest(src: { url: string; pattern: string }): Promise<string> {
   const html = await fetchText(src.url);
   if (!html) return "";
   try {
-    const m = new RegExp(src.pattern, "m").exec(html);
-    if (m) return m[1] ?? m[0];
+    const re = new RegExp(src.pattern, "gm");
+    let best: string | null = null;
+    let bestSemver: number[] | null = null;
+    for (const m of html.matchAll(re)) {
+      const raw = m[1] ?? m[0];
+      const sv = semverOf(raw);
+      if (sv) {
+        if (!bestSemver || compareSemver(sv, bestSemver) > 0) {
+          bestSemver = sv;
+          best = raw;
+        }
+      } else if (best === null) {
+        best = raw;
+      }
+    }
+    return best ?? "";
   } catch {
     /* invalid pattern in agents.json */
   }
