@@ -140,6 +140,24 @@ export function resolveAgents(): AgentDef[] {
   return buildAgents().agents;
 }
 
+/**
+ * `resolveAgents()` restricted to the built-in catalog (agents.json). User-defined custom
+ * agents (added through the `.agents` setting) carry no official install/version data, so
+ * the manage/update page excludes them and only shows catalog agents. `command` is the
+ * stable key: built-ins keep their catalog command even when an override changes other fields.
+ */
+export function resolveBuiltInAgents(): AgentDef[] {
+  // Same key set (command + id) buildAgents() uses to tell a built-in (or a user
+  // override of one) apart from a brand-new custom agent, so overrides that change
+  // `command` still count as built-in while truly custom tools are excluded.
+  const builtInKeys = new Set<string>();
+  for (const b of builtInAgents) {
+    builtInKeys.add(b.command);
+    builtInKeys.add(b.id ?? b.command);
+  }
+  return resolveAgents().filter((a) => builtInKeys.has(a.command) || builtInKeys.has(a.id));
+}
+
 /** Human-readable warnings about the merged config (e.g. duplicate command / name / id). Empty when the config is clean. */
 export function getAgentConfigWarnings(): string[] {
   return buildAgents().warnings;

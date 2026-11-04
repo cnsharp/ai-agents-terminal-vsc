@@ -4,7 +4,7 @@
 // through agentInstaller, and every change is pushed to the webview as a message.
 
 import * as vscode from "vscode";
-import { resolveAgents, installAutomatableOnPlatform, installTarget, type AgentDef } from "../agents";
+import { resolveAgents, resolveBuiltInAgents, installAutomatableOnPlatform, installTarget, type AgentDef } from "../agents";
 import { canExecute, invalidateExecutableCache } from "../agentDetector";
 import * as settings from "../settings/settings";
 import { agentIconUri } from "./icons";
@@ -102,7 +102,7 @@ export class AgentManagerPanel {
   private agentCards(): AgentCard[] {
     const cards: AgentCard[] = [];
     const seen = new Set<string>();
-    for (const def of resolveAgents()) {
+    for (const def of resolveBuiltInAgents()) {
       if (seen.has(def.id)) continue;
       seen.add(def.id);
       const spec = def.install;
@@ -136,7 +136,7 @@ export class AgentManagerPanel {
   /** Send every agent whose in-memory result differs from what the webview last saw. */
   private pushVersionDeltas(): void {
     this.panel.webview.postMessage({ type: "checking", checking: agentVersion.isChecking() });
-    for (const def of resolveAgents()) {
+    for (const def of resolveBuiltInAgents()) {
       const info = agentVersion.infoFor(def.command);
       if (!info) continue;
       this.panel.webview.postMessage({
@@ -195,7 +195,7 @@ export class AgentManagerPanel {
     this.checking = true;
     this.panel.webview.postMessage({ type: "checking", checking: true });
     try {
-      await agentVersion.checkAll(resolveAgents());
+      await agentVersion.checkAll(resolveBuiltInAgents());
       const available = Object.values(agentVersion.snapshot()).filter(
         (i) => i.status === "UPDATE_AVAILABLE"
       ).length;
@@ -211,7 +211,7 @@ export class AgentManagerPanel {
 
   /** Install (or upgrade) one agent head-less, then re-probe detection + versions. */
   private async runAction(agentId: string, upgrade: boolean): Promise<void> {
-    const def = resolveAgents().find((a) => a.id === agentId);
+    const def = resolveBuiltInAgents().find((a) => a.id === agentId);
     if (!def?.install || this.busy.has(agentId)) {
       return;
     }
