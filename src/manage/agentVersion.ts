@@ -42,9 +42,6 @@ const PROBE_TIMEOUT_MS = 20_000;
  *  hammer package registries or spawn dozens of shells at once. */
 const CONCURRENCY = 5;
 
-/** A cached current version older than this is treated as stale and re-probed on open (24h). */
-const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
-
 const results = new Map<string, UpdateInfo>();
 const listeners = new Set<() => void>();
 let checking = false;
@@ -52,15 +49,15 @@ let checking = false;
 /** Detections collected during a scan, flushed to settings.json once at the end (one write
  * per scan/refresh, not one per agent). Cleared after each flush. */
 const dirtyLatest: Record<string, string> = {};
-/** Current (installed) versions collected during a scan, with timestamps, flushed once at the end. */
-const dirtyCurrent: Record<string, { v: string; t: number }> = {};
+/** Current (installed) versions collected during a scan, flushed once at the end. */
+const dirtyCurrent: Record<string, string> = {};
 
 function markLatest(command: string, version: string): void {
   if (version) dirtyLatest[command.trim().toLowerCase()] = version;
 }
 
 function markCurrent(command: string, version: string): void {
-  if (version) dirtyCurrent[command.trim().toLowerCase()] = { v: version, t: Date.now() };
+  if (version) dirtyCurrent[command.trim().toLowerCase()] = version;
 }
 
 function flushLatest(): void {
@@ -70,18 +67,18 @@ function flushLatest(): void {
   for (const k of Object.keys(dirtyCurrent)) delete dirtyCurrent[k];
 }
 
-/** Seed the in-memory cache with last-known latest versions so the panel shows them
- * immediately (cache-first) before the next network probe lands. Live checks overwrite
- * these entries; the seeded status is NA (re-resolved on the next scan). */
-const now = Date.now();
+/** Seed the in-memory cache with last-known versions so the panel shows them immediately
+ * (cache-first) before the next probe lands. Neither cache has a TTL: a remembered version is
+ * kept until a successful scan refreshes it. Live checks overwrite these entries; the seeded
+ * status is NA (re-resolved on the next scan). */
 for (const [cmd, ver] of Object.entries(getLatestVersions())) {
   if (ver) results.set(cmd, { status: "NA", current: "", latest: ver });
 }
-for (const [cmd, entry] of Object.entries(getCurrentVersions())) {
-  if (entry?.v && now - entry.t < CACHE_TTL_MS) {
+for (const [cmd, ver] of Object.entries(getCurrentVersions())) {
+  if (ver) {
     const k = cmd.trim().toLowerCase();
     const existing = results.get(k);
-    results.set(k, { status: existing?.status ?? "NA", current: entry.v, latest: existing?.latest ?? "" });
+    results.set(k, { status: existing?.status ?? "NA", current: ver, latest: existing?.latest ?? "" });
   }
 }
 

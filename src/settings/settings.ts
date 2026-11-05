@@ -64,22 +64,30 @@ export function recordLatestVersion(command: string, version: string): void {
 
 /**
  * Last-known *current* (installed) version for each agent command, persisted across sessions so
- * the manager panel can show it immediately (cache-first) before the next local probe. Keyed by
- * lower-cased command, with a timestamp (t) used for TTL eviction on the reader side.
+ * the manager panel can show it immediately (cache-first) before the next local probe. Like the
+ * latest-version cache it has no TTL: a remembered version is kept until the next successful
+ * probe refreshes it. Keyed by lower-cased command.
  */
-let currentVersionsCache: Record<string, { v: string; t: number }> | null = null;
+let currentVersionsCache: Record<string, string> | null = null;
 
-export function getCurrentVersions(): Record<string, { v: string; t: number }> {
+export function getCurrentVersions(): Record<string, string> {
   if (currentVersionsCache) return currentVersionsCache;
-  currentVersionsCache = cfg().get<Record<string, { v: string; t: number }>>("currentVersions", {});
+  const raw = cfg().get<Record<string, string | { v: string }>>("currentVersions", {});
+  const normalized: Record<string, string> = {};
+  for (const [cmd, val] of Object.entries(raw)) {
+    // Tolerate the old {v, t} shape written before the TTL was removed.
+    const v = typeof val === "string" ? val : val?.v;
+    if (v) normalized[cmd.trim().toLowerCase()] = v;
+  }
+  currentVersionsCache = normalized;
   return currentVersionsCache;
 }
 
-export function recordCurrentVersions(updates: Record<string, { v: string; t: number }>): void {
+export function recordCurrentVersions(updates: Record<string, string>): void {
   const merged = { ...getCurrentVersions() };
-  for (const [cmd, entry] of Object.entries(updates)) {
-    if (!entry?.v) continue; // never clobber a good last-known value with an empty detection
-    merged[cmd.trim().toLowerCase()] = { v: entry.v, t: entry.t };
+  for (const [cmd, ver] of Object.entries(updates)) {
+    if (!ver) continue; // never clobber a good last-known value with an empty detection
+    merged[cmd.trim().toLowerCase()] = ver;
   }
   currentVersionsCache = merged;
   cfg().update("currentVersions", merged, vscode.ConfigurationTarget.Global);
