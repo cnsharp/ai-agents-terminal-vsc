@@ -14,12 +14,20 @@ cd "$REPO_ROOT"
 echo "==> project: $REPO_ROOT"
 
 # A terminal launched from VS Code does not inherit the login shell's PATH, so
-# node/npm (official installer, Homebrew, nvm) may be missing here.
+# seed the common install locations first. When nvm is available, explicitly
+# select Node 22 (nvm is a shell function, so it must be sourced here). This is
+# important: prepending every nvm version used to let an old Node (e.g. v8) win
+# over v22 and break the build with a cryptic tsc SyntaxError. If nvm is not
+# installed, fall back to whatever node/npm is already on PATH.
 export PATH="/usr/local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:$PATH"
-for nvmBin in "$HOME"/.nvm/versions/node/*/bin; do
-  if [ -d "$nvmBin" ]; then PATH="$nvmBin:$PATH"; fi
-done
+NVM_SH="${NVM_DIR:-$HOME/.nvm}/nvm.sh"
+if [ -s "$NVM_SH" ]; then
+  # shellcheck disable=SC1090
+  . "$NVM_SH"
+  nvm use 22 >/dev/null || { echo "error: nvm has no Node 22 installed. Run: nvm install 22" >&2; exit 1; }
+fi
 command -v npm >/dev/null 2>&1 || { echo "error: npm not found on PATH" >&2; exit 1; }
+echo "==> node $(node -v), npm $(npm -v)"
 command -v code >/dev/null 2>&1 || {
   echo "error: 'code' CLI not found. Run 'Shell Command: Install \"code\" command in PATH' first." >&2
   exit 1
@@ -30,7 +38,7 @@ npm run compile
 
 echo "==> package"
 marker="$(mktemp)"
-npx vsce package --allow-missing-repository --out dist/
+npx @vscode/vsce package --allow-missing-repository --out dist/
 vsix="$(find "$REPO_ROOT/dist" -maxdepth 1 -name '*.vsix' -newer "$marker" -exec ls -t {} + 2>/dev/null | head -n 1 || true)"
 rm -f "$marker"
 

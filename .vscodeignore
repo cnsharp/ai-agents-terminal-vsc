@@ -4,3 +4,7 @@ node_modules
 src/
 tsconfig.json
 .gitignore
+
+# agent / dev-only directories that must never ship in the published extension
+.*/
+*.vsix
