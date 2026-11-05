@@ -196,13 +196,6 @@ export class AgentManagerPanel {
     this.panel.webview.postMessage({ type: "checking", checking: true });
     try {
       await agentVersion.checkAll(resolveBuiltInAgents());
-      const available = Object.values(agentVersion.snapshot()).filter(
-        (i) => i.status === "UPDATE_AVAILABLE"
-      ).length;
-      this.panel.webview.postMessage({
-        type: "status",
-        message: available > 0 ? t("status.updatesAvailable", String(available)) : "",
-      });
     } finally {
       this.checking = false;
       this.panel.webview.postMessage({ type: "checking", checking: false });

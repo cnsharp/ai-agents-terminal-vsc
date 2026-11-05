@@ -14,7 +14,6 @@
   "manage.updateAll": "Update All",
   "manage.updateAllCount": "Update All ({0})",
   "manage.empty": "No agents configured.",
-  "status.updatesAvailable": "{0} agent(s) have updates available",
   "status.installing": "Installing {0} ({1})…",
   "status.noInstallUrl": "No download page is defined for {0}.",
   "status.install.opened": "Opened {0} download page",

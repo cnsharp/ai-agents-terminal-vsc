@@ -24,7 +24,6 @@ interface AgentCard {
 
 let cards: AgentCard[] = [];
 let checking = false;
-let statusLine = "";
 /** Localized strings pushed by the host with `init` (the webview has no access to vscode.l10n);
  *  until then `t()` falls back to the English text below. */
 let strings: Record<string, string> = {};
@@ -40,7 +39,6 @@ const grid = document.getElementById("grid") as HTMLDivElement;
 const empty = document.getElementById("empty") as HTMLDivElement;
 const refreshBtn = document.getElementById("refresh") as HTMLButtonElement;
 const upgradeAllBtn = document.getElementById("upgradeAll") as HTMLButtonElement;
-const statusEl = document.getElementById("statusline") as HTMLSpanElement;
 
 refreshBtn.addEventListener("click", () => vscode.postMessage({ type: "refresh" }));
 upgradeAllBtn.addEventListener("click", () => vscode.postMessage({ type: "upgradeAll" }));
@@ -86,10 +84,6 @@ window.addEventListener("message", (e: MessageEvent) => {
       }
       break;
     }
-    case "status":
-      statusLine = String(msg.message ?? "");
-      render();
-      break;
   }
 });
 
@@ -100,7 +94,6 @@ function upgradableCount(): number {
 function render(): void {
   // Installed agents first; stable sort keeps each group's original order.
   cards.sort((a, b) => Number(b.installed) - Number(a.installed));
-  statusEl.textContent = statusLine;
   upgradeAllBtn.textContent =
     upgradableCount() > 0
       ? t("manage.updateAllCount", "Update All ({0})").replace("{0}", String(upgradableCount()))

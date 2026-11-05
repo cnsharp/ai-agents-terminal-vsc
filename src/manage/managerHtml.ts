@@ -21,7 +21,6 @@ export function renderManagerHtml(cspSource: string, scriptUri: vscode.Uri): str
     #topbar button:hover:not(:disabled) { background: var(--vscode-button-secondaryHoverBackground, #444); }
     #topbar button:disabled { opacity: 0.5; cursor: default; }
     #upgradeAll { background: var(--vscode-button-background, #0e639c) !important; color: var(--vscode-button-foreground, #ffffff) !important; border-color: transparent !important; }
-    #statusline { font-size: 12px; color: var(--vscode-descriptionForeground, #999999); }
     #content { max-width: 1400px; margin: 0 auto; padding: 14px 18px 40px; }
     #grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
     .card { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border: 1px solid var(--vscode-panel-border, #333); border-radius: 6px; background: var(--vscode-editorWidget-background, rgba(40,40,40,0.6)); }
@@ -55,7 +54,6 @@ export function renderManagerHtml(cspSource: string, scriptUri: vscode.Uri): str
     <h1>${t("manage.heading")}</h1>
     <button id="refresh" type="button">${t("manage.checkUpdates")}</button>
     <button id="upgradeAll" type="button" disabled>${t("manage.updateAll")}</button>
-    <span id="statusline"></span>
   </div>
   <div id="content">
     <div id="grid"></div>

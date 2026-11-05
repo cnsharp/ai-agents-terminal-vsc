@@ -4,7 +4,6 @@
   var vscode = acquireVsCodeApi();
   var cards = [];
   var checking = false;
-  var statusLine = "";
   var strings = {};
   function t(key, fallback) {
     const v = strings[key];
@@ -14,7 +13,6 @@
   var empty = document.getElementById("empty");
   var refreshBtn = document.getElementById("refresh");
   var upgradeAllBtn = document.getElementById("upgradeAll");
-  var statusEl = document.getElementById("statusline");
   refreshBtn.addEventListener("click", () => vscode.postMessage({ type: "refresh" }));
   upgradeAllBtn.addEventListener("click", () => vscode.postMessage({ type: "upgradeAll" }));
   window.addEventListener("message", (e) => {
@@ -58,10 +56,6 @@
         }
         break;
       }
-      case "status":
-        statusLine = String(msg.message ?? "");
-        render();
-        break;
     }
   });
   function upgradableCount() {
@@ -69,7 +63,6 @@
   }
   function render() {
     cards.sort((a, b) => Number(b.installed) - Number(a.installed));
-    statusEl.textContent = statusLine;
     upgradeAllBtn.textContent = upgradableCount() > 0 ? t("manage.updateAllCount", "Update All ({0})").replace("{0}", String(upgradableCount())) : t("manage.updateAll", "Update All");
     upgradeAllBtn.disabled = checking || upgradableCount() === 0;
     empty.hidden = cards.length > 0;
