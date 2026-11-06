@@ -74,6 +74,10 @@ window.addEventListener("message", (e: MessageEvent) => {
     case "checking":
       checking = !!msg.checking;
       refreshBtn.disabled = checking;
+      // Show the in-flight scan on the button itself, not just by disabling it.
+      refreshBtn.textContent = checking
+        ? t("manage.checking", "Checking…")
+        : t("manage.checkUpdates", "Check Updates");
       render();
       break;
     case "result": {
