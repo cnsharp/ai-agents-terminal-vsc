@@ -11,6 +11,7 @@
   "manage.update": "更新",
   "manage.openSite": "网站",
   "manage.updateAvailable": "可更新",
+  "manage.statusClosed": "已下线",
   "manage.updateAll": "全部更新",
   "manage.updateAllCount": "全部更新（{0}）",
   "manage.empty": "未配置任何 agent。",

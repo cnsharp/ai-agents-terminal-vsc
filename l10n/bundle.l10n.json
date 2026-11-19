@@ -11,6 +11,7 @@
   "manage.update": "Update",
   "manage.openSite": "Website",
   "manage.updateAvailable": "Update available",
+  "manage.statusClosed": "Discontinued",
   "manage.updateAll": "Update All",
   "manage.updateAllCount": "Update All ({0})",
   "manage.empty": "No agents configured.",

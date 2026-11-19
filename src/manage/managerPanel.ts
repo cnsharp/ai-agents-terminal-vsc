@@ -4,7 +4,7 @@
 // through agentInstaller, and every change is pushed to the webview as a message.
 
 import * as vscode from "vscode";
-import { resolveAgents, resolveBuiltInAgents, installAutomatableOnPlatform, installTarget, type AgentDef } from "../agents";
+import { resolveAgents, resolveBuiltInAgents, installAutomatableOnPlatform, installTarget, TERMINAL_STATUSES, type AgentDef } from "../agents";
 import { canExecute, invalidateExecutableCache } from "../agentDetector";
 import * as settings from "../settings/settings";
 import { agentIconUri, globalIconDir } from "./icons";
@@ -33,6 +33,8 @@ interface AgentCard {
   error?: string;
   canInstall: boolean;
   canUpgrade: boolean;
+  /** Localized status flag, shown for an installed `closed` agent. */
+  statusFlag?: string;
 }
 
 export class AgentManagerPanel {
@@ -120,12 +122,18 @@ export class AgentManagerPanel {
       seen.add(def.id);
       const spec = def.install;
       const info = agentVersion.infoFor(def.command);
+      const installed = canExecute(def.command);
+      // A `closed` (terminal) agent that is not installed locally is hidden from
+      // Manage Agents; stage A already removes it, this also covers a stale cache.
+      // An installed one is kept and shown with a status flag.
+      const terminal = TERMINAL_STATUSES.has(def.status ?? "");
+      if (terminal && !installed) continue;
       cards.push({
         id: def.id,
         displayName: def.displayName,
         command: def.command,
         iconUri: agentIconUri(this.panel.webview, this.extensionUri, def.icon, this.globalStorageUri),
-        installed: canExecute(def.command),
+        installed,
         url: def.url,
         status: info?.status ?? "NA",
         current: info?.current ?? "",
@@ -133,6 +141,7 @@ export class AgentManagerPanel {
         error: info?.error,
         canInstall: installAutomatableOnPlatform(spec),
         canUpgrade: installAutomatableOnPlatform(spec),
+        statusFlag: terminal && installed ? t("manage.statusClosed") : undefined,
       });
     }
     return cards;

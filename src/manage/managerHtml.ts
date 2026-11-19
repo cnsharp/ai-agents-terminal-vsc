@@ -32,6 +32,7 @@ export function renderManagerHtml(cspSource: string, scriptUri: vscode.Uri): str
     .card .names { flex: 1 1 auto; min-width: 0; }
     .card .name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .card .badge { flex: 0 0 auto; padding: 2px 8px; font-size: 11px; border-radius: 9px; background: var(--vscode-button-background, #0e639c); color: var(--vscode-button-foreground, #ffffff); }
+    .card .badge.eol { background: var(--vscode-inputValidation-warningBackground, #5a3a00); color: var(--vscode-inputValidation-warningForeground, #ffffff); }
     .card .warn { flex: 0 0 auto; color: var(--vscode-editorWarning-foreground, #cca700); font-size: 14px; }
     .card .rows { display: flex; flex-direction: column; gap: 3px; font-size: 12px; }
     .card .row { display: flex; justify-content: space-between; gap: 8px; }

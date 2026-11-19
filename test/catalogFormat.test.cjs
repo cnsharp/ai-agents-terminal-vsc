@@ -51,4 +51,36 @@ test("bundled v2 catalog parses with status fields", () => {
   assert.strictEqual(parsed.length, 51);
   assert.ok(parsed.some((a) => a.id === "qodercn" && a.status === "active"));
   assert.ok(parsed.some((a) => a.id === "aider" && a.status === "stale"));
+  assert.ok("lastReleaseAt was collected", parsed.some((a) => a.lastReleaseAt));
+  assert.ok("platformSupport is parsed", parsed.every((a) => a.platformSupport));
+});
+
+test("parseCatalog carries platformSupport and lastReleaseAt", () => {
+  const v2 = JSON.stringify({
+    schemaVersion: 2, updatedAt: "2026-11-19",
+    agents: [{
+      id: "x", command: "x", displayName: "X", status: "active",
+      lastReleaseAt: "2026-11-18T23:09:39Z",
+      platformSupport: { darwin: "supported", win32: "unsupported", linux: "supported" },
+    }],
+  });
+  const parsed = agents.parseCatalog(v2);
+  assert.strictEqual(parsed[0].lastReleaseAt, "2026-11-18T23:09:39Z");
+  assert.strictEqual(parsed[0].platformSupport.win32, "unsupported");
+});
+
+test("OS filter drops only explicit unsupported on this OS", () => {
+  const entry = { platformSupport: { darwin: "supported", win32: "unsupported", linux: "viaWsl" } };
+  assert.strictEqual(agents.isSupportedOnThisOs(entry, "darwin"), true);
+  assert.strictEqual(agents.isSupportedOnThisOs(entry, "win32"), false);
+  assert.strictEqual(agents.isSupportedOnThisOs(entry, "linux"), true); // viaWsl kept
+});
+
+test("OS filter keeps an entry with no platformSupport", () => {
+  assert.strictEqual(agents.isSupportedOnThisOs({}, "win32"), true);
+  assert.strictEqual(agents.isSupportedOnThisOs({}, "darwin"), true);
+});
+
+test("terminal state set contains only closed", () => {
+  assert.deepStrictEqual([...agents.TERMINAL_STATUSES], ["closed"]);
 });

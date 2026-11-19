@@ -17,6 +17,8 @@ interface AgentCard {
   error?: string;
   canInstall: boolean;
   canUpgrade: boolean;
+  /** Localized status flag for an installed `closed` agent. */
+  statusFlag?: string;
   busy?: string;
   /** Last install/upgrade outcome shown under the version rows. */
   result?: { ok: boolean; message: string };
@@ -134,6 +136,12 @@ function cardEl(c: AgentCard): HTMLElement {
     badge.className = "badge";
     badge.textContent = t("manage.updateAvailable", "Update available");
     head.append(badge);
+  }
+  if (c.statusFlag) {
+    const flag = document.createElement("span");
+    flag.className = "badge eol";
+    flag.textContent = c.statusFlag;
+    head.append(flag);
   }
 
   // --- version rows ---

@@ -8,6 +8,18 @@ import * as vscode from "vscode";
 // is shared verbatim between the branches.
 const CONFIG_SECTION = "aiAgentsTerminal";
 
+/** Whether this registry's install path works on each OS (v2, Meta/AGENTS.md §4). */
+export interface PlatformSupport {
+  darwin?: "supported" | "unsupported" | "viaWsl";
+  win32?: "supported" | "unsupported" | "viaWsl";
+  linux?: "supported" | "unsupported" | "viaWsl";
+}
+
+/** The single terminal vendor-lifecycle state (manually assigned only):
+ *  the product/service is discontinued (offline). Shared by the stage-A merge
+ *  filter and the Manage Agents status flag. */
+export const TERMINAL_STATUSES: ReadonlySet<string> = new Set(["closed"]);
+
 export interface AgentDef {
   readonly id: string;
   /** Binary launched in the terminal (also used for PATH detection). */
@@ -31,6 +43,10 @@ export interface AgentDef {
    *  Bundled v1 entries have no status and are treated as "active". Used by the catalog merge to
    *  drop outdated agents that are not installed locally. */
   readonly status?: string;
+  /** Whether this registry's install path works on each OS (v2). */
+  readonly platformSupport?: PlatformSupport;
+  /** UTC+0 (…Z) timestamp of the agent's most recent upstream release (v2). */
+  readonly lastReleaseAt?: string;
 }
 
 /** Package manager (or bare shell / web download) an agent's install spec is expressed against. */
@@ -115,6 +131,10 @@ export interface AgentConfig {
   id?: string;
   /** Vendor-lifecycle status from the v2 remote catalog. Bundled v1 entries omit it (= active). */
   status?: string;
+  /** Whether this registry's install path works on each OS (v2). */
+  platformSupport?: PlatformSupport;
+  /** UTC+0 (…Z) timestamp of the agent's most recent upstream release (v2). */
+  lastReleaseAt?: string;
 }
 
 // Built-in catalog, loaded once from agents.json at activate() time. This is the
@@ -131,7 +151,7 @@ export function initBuiltInAgents(ctx: vscode.ExtensionContext): void {
   try {
     const fileUri = vscode.Uri.joinPath(ctx.extensionUri, "agents.json");
     const raw = fs.readFileSync(fileUri.fsPath, "utf8");
-    builtInAgents = parseCatalog(raw);
+    setBuiltInAgents(parseCatalog(raw));
   } catch (e) {
     console.error("[" + CONFIG_SECTION + "] the agent list failed to load: could not read agents.json.", e);
     builtInAgents = [];
@@ -158,9 +178,31 @@ export function parseCatalog(raw: string): AgentConfig[] {
   return arr as AgentConfig[];
 }
 
-/** Replace the in-memory built-in catalog (called by the startup hot-update). */
+/** OS key matching the platformSupport keys (Meta/AGENTS.md §4). */
+export function currentOsKey(platform: string = process.platform): "darwin" | "win32" | "linux" {
+  if (platform === "darwin") return "darwin";
+  if (platform === "win32") return "win32";
+  return "linux";
+}
+
+/** Keep everything except an explicit `unsupported` for this OS. A missing
+ *  `platformSupport` (legacy v1 entries / user-defined overrides) and `viaWsl`
+ *  (win32 through WSL) are kept. `platform` is injectable for tests. */
+export function isSupportedOnThisOs(
+  entry: { platformSupport?: PlatformSupport },
+  platform: string = process.platform
+): boolean {
+  const s = entry.platformSupport;
+  if (!s) return true;
+  return s[currentOsKey(platform)] !== "unsupported";
+}
+
+/** Replace the in-memory built-in catalog (bundled, cached or merged — all three
+ *  paths call this). Stage A OS filter lives here so every consumer sees the same
+ *  filtered list; user overrides are merged later by buildAgents() and are never
+ *  filtered. See Meta/meta/CATALOG_MERGE.md. */
 export function setBuiltInAgents(list: AgentConfig[]): void {
-  builtInAgents = Array.isArray(list) ? list : [];
+  builtInAgents = Array.isArray(list) ? list.filter((a) => isSupportedOnThisOs(a)) : [];
 }
 
 /** Current built-in catalog (used by the hot-update merge as the base layer). */
@@ -252,6 +294,9 @@ function buildAgents(): { agents: AgentDef[]; warnings: string[] } {
       icon: cfg.icon ?? cfg.iconFile,
       url: cfg.url,
       install: cfg.install,
+      status: cfg.status,
+      platformSupport: cfg.platformSupport,
+      lastReleaseAt: cfg.lastReleaseAt,
     });
   };
 

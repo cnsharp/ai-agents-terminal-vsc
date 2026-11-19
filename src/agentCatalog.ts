@@ -6,7 +6,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as vscode from "vscode";
-import { AgentConfig, parseCatalog, setBuiltInAgents } from "./agents";
+import { AgentConfig, TERMINAL_STATUSES, parseCatalog, setBuiltInAgents } from "./agents";
 import { canExecute } from "./agentDetector";
 
 const CATALOG_URL =
@@ -20,8 +20,9 @@ const PROBE_TIMEOUT_MS = 20_000;
 const MAX_BODY_BYTES = 2 * 1024 * 1024;
 const MAX_AGENTS = 500;
 
-/** Statuses considered "outdated" by the merge filter. */
-const OUTDATED = new Set(["stale", "maintaining", "closed"]);
+/** `closed` is the single terminal state. stale / maintaining describe
+ *  development pace, not end-of-life — see Meta/meta/CATALOG_MERGE.md. */
+const OUTDATED = TERMINAL_STATUSES;
 const KNOWN_STATUS = new Set(["active", "maintaining", "stale", "closed", "unknown"]);
 
 function canonStatus(s: string | undefined): string {
