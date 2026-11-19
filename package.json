@@ -145,13 +145,6 @@
               }
             }
           }
-        },
-        "aiAgentsTerminal.installedAgents": {
-          "type": "array",
-          "items": { "type": "string" },
-          "default": [],
-          "hidden": true,
-          "markdownDescription": "Internal cache of AI agent commands detected on PATH. Maintained automatically — do not edit by hand. (internal)"
         }
       }
     },

@@ -7,7 +7,7 @@ import * as vscode from "vscode";
 import { resolveAgents, resolveBuiltInAgents, installAutomatableOnPlatform, installTarget, type AgentDef } from "../agents";
 import { canExecute, invalidateExecutableCache } from "../agentDetector";
 import * as settings from "../settings/settings";
-import { agentIconUri } from "./icons";
+import { agentIconUri, globalIconDir } from "./icons";
 import { renderManagerHtml } from "./managerHtml";
 import { webviewAssetUri } from "../terminal/panelHtml";
 import {
@@ -41,6 +41,7 @@ export class AgentManagerPanel {
 
   private readonly panel: vscode.WebviewPanel;
   private readonly extensionUri: vscode.Uri;
+  private readonly globalStorageUri: vscode.Uri;
   private readonly disposables: vscode.Disposable[] = [];
   /** Agents with an install/upgrade running — guards re-entry and Upgrade All selection. */
   private readonly busy = new Map<string, string>();
@@ -48,15 +49,19 @@ export class AgentManagerPanel {
   /** Bound so it can be removed again on dispose (a fresh arrow would not match). */
   private readonly onVersionsChanged = (): void => this.pushVersionDeltas();
 
-  private constructor(extensionUri: vscode.Uri) {
+  private constructor(extensionUri: vscode.Uri, globalStorageUri: vscode.Uri) {
     this.extensionUri = extensionUri;
+    this.globalStorageUri = globalStorageUri;
     this.panel = vscode.window.createWebviewPanel(
       AgentManagerPanel.viewType,
       t("manage.title"),
       vscode.ViewColumn.Active,
       {
         enableScripts: true,
-        localResourceRoots: [vscode.Uri.joinPath(extensionUri, "media")],
+        localResourceRoots: [
+          vscode.Uri.joinPath(extensionUri, "media"),
+          globalIconDir(globalStorageUri),
+        ],
         retainContextWhenHidden: true,
       }
     );
@@ -85,13 +90,21 @@ export class AgentManagerPanel {
     );
   }
 
+  /** Rebuild the card grid if the page is currently open (e.g. after a catalog hot-update). */
+  public static refreshIfOpen(): void {
+    AgentManagerPanel.current?.sendInit();
+  }
+
   /** Open the page (or reveal the already-open one). */
-  public static show(extensionUri: vscode.Uri): void {
+  public static show(context: vscode.ExtensionContext): void {
     if (AgentManagerPanel.current) {
       AgentManagerPanel.current.panel.reveal(vscode.ViewColumn.Active);
       return;
     }
-    AgentManagerPanel.current = new AgentManagerPanel(extensionUri);
+    AgentManagerPanel.current = new AgentManagerPanel(
+      context.extensionUri,
+      context.globalStorageUri
+    );
   }
 
   private html(): string {
@@ -111,7 +124,7 @@ export class AgentManagerPanel {
         id: def.id,
         displayName: def.displayName,
         command: def.command,
-        iconUri: agentIconUri(this.panel.webview, this.extensionUri, def.icon),
+        iconUri: agentIconUri(this.panel.webview, this.extensionUri, def.icon, this.globalStorageUri),
         installed: canExecute(def.command),
         url: def.url,
         status: info?.status ?? "NA",

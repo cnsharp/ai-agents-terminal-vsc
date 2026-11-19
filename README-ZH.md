@@ -130,7 +130,7 @@
 
 ```
 ai-agents-terminal-vsc/
-├── package.json          # 清单：name=ai-agents-terminal, publisher=cnsharpstudio
+├── package.json          # 清单：name=ai-agents-terminal, publisher=cnsharp
 │                         #   contributes.configuration: yoloMode / agents / installedAgents
 │                         #   contributes.commands + keybindings
 ├── tsconfig.json         # TS 配置 (outDir=out, rootDir=src)

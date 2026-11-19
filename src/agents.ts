@@ -27,6 +27,10 @@ export interface AgentDef {
   readonly url?: string;
   /** How the agent is installed / upgraded — drives the manage page's Install / Upgrade buttons. */
   readonly install?: InstallSpec;
+  /** Vendor-lifecycle status from the remote v2 catalog (active/maintaining/stale/closed/unknown).
+   *  Bundled v1 entries have no status and are treated as "active". Used by the catalog merge to
+   *  drop outdated agents that are not installed locally. */
+  readonly status?: string;
 }
 
 /** Package manager (or bare shell / web download) an agent's install spec is expressed against. */
@@ -109,6 +113,8 @@ export interface AgentConfig {
   /** Set false to hide a built-in agent without deleting it. Defaults to true. */
   enabled?: boolean;
   id?: string;
+  /** Vendor-lifecycle status from the v2 remote catalog. Bundled v1 entries omit it (= active). */
+  status?: string;
 }
 
 // Built-in catalog, loaded once from agents.json at activate() time. This is the
@@ -125,15 +131,41 @@ export function initBuiltInAgents(ctx: vscode.ExtensionContext): void {
   try {
     const fileUri = vscode.Uri.joinPath(ctx.extensionUri, "agents.json");
     const raw = fs.readFileSync(fileUri.fsPath, "utf8");
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) {
-      throw new Error("agents.json root must be an array of agent objects");
-    }
-    builtInAgents = parsed as AgentConfig[];
+    builtInAgents = parseCatalog(raw);
   } catch (e) {
     console.error("[" + CONFIG_SECTION + "] the agent list failed to load: could not read agents.json.", e);
     builtInAgents = [];
   }
+}
+
+/**
+ * Parse a catalog body: either the legacy v1 flat array, or the v2 envelope
+ * `{ schemaVersion, updatedAt, agents }` (the remote hot-update format). The
+ * envelope's extra fields are ignored; only `agents` is used.
+ * Returns [] on unrecognised/root-invalid input.
+ */
+export function parseCatalog(raw: string): AgentConfig[] {
+  const parsed = JSON.parse(raw);
+  let arr: unknown = parsed;
+  if (!Array.isArray(parsed) && parsed && typeof parsed === "object") {
+    if (parsed.schemaVersion === 2 && Array.isArray((parsed as { agents?: unknown }).agents)) {
+      arr = (parsed as { agents: unknown }).agents;
+    }
+  }
+  if (!Array.isArray(arr)) {
+    throw new Error("catalog root must be a v1 array or a v2 {schemaVersion:2, agents:[...]} envelope");
+  }
+  return arr as AgentConfig[];
+}
+
+/** Replace the in-memory built-in catalog (called by the startup hot-update). */
+export function setBuiltInAgents(list: AgentConfig[]): void {
+  builtInAgents = Array.isArray(list) ? list : [];
+}
+
+/** Current built-in catalog (used by the hot-update merge as the base layer). */
+export function getBuiltInAgents(): AgentConfig[] {
+  return builtInAgents;
 }
 
 export function resolveAgents(): AgentDef[] {

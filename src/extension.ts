@@ -1,6 +1,6 @@
-import * as fs from "fs";
 import * as vscode from "vscode";
 import { resolveAgents, getAgentConfigWarnings, initBuiltInAgents, type AgentDef } from "./agents";
+import { loadCachedBuiltIns, refreshOnStartup, resolveIconFilename } from "./agentCatalog";
 import { AgentManagerPanel } from "./manage/managerPanel";
 import { isInstalled, findExecutablePath, boostedPath } from "./agentDetector";
 
@@ -15,8 +15,6 @@ const LAST_AGENT_KEY = "lastAgentCommand";
 
 // Settings namespace (package.json `contributes.configuration`).
 const CONFIG_SECTION = "aiAgentsTerminal";
-// Full extension id (<publisher>.<name>) for opening scoped Settings.
-const EXTENSION_FULL_ID = "cnsharpstudio.ai-agents-terminal";
 
 function agentIcon(
   ctx: vscode.ExtensionContext,
@@ -26,17 +24,11 @@ function agentIcon(
   if (!icon) {
     return new vscode.ThemeIcon("terminal");
   }
-  // The registry stores only the icon filename (e.g. `claude.svg`); VSC ships PNGs only, so
-  // prefer `<id>.svg` and fall back to `<id>.png` under media/agents.
-  const base = icon.split("/").pop() ?? "";
-  const name = base.replace(/\.[^.]+$/, "");
-  const dir = vscode.Uri.joinPath(ctx.extensionUri, "media", "agents");
-  for (const ext of ["svg", "png"]) {
-    const candidate = vscode.Uri.joinPath(dir, `${name}.${ext}`);
-    if (fs.existsSync(candidate.fsPath)) {
-      return candidate;
-    }
-  }
+  // The registry stores only the icon filename. Prefer the bundled media/agents
+  // asset; the hot-update cache (globalStorage/icons/agents) is checked next so
+  // newly added agents can show an icon without a re-release.
+  const cached = resolveIconFilename(ctx, icon);
+  if (cached) return cached;
   return new vscode.ThemeIcon("terminal");
 }
 
@@ -112,30 +104,36 @@ function registerInstalledTerminalProfiles(ctx: vscode.ExtensionContext, install
   });
 }
 
-// Cache of installed agent commands, persisted in Global settings so every
-// window and every restart can render instantly without re-probing PATH.
+// Cache of installed agent commands, kept in globalState (INTERNAL — not a
+// user setting). It used to live in the `aiAgentsTerminal.installedAgents`
+// setting, whose "Add Item" button in Settings UI misled users into thinking
+// that was how you add an agent. Real agents are defined in `agents`; this is
+// an auto-maintained cache, so it must be invisible/uneditable in Settings.
 const INSTALLED_CACHE_KEY = "installedAgents";
+// Legacy setting key, read once to migrate existing caches, then ignored.
+const LEGACY_INSTALLED_SETTING = "installedAgents";
 // Cross-instance mutex so only the first VS Code window refreshes the cache.
 const REFRESH_LOCK_KEY = "installedAgentsRefreshLock";
 const REFRESH_LOCK_TTL = 15_000; // ms — a lock older than this is treated as stale
 
-/** Read the cached set of installed agent commands from settings. */
-function readInstalledCache(): Set<string> {
+/** Read the cached set of installed agent commands from globalState. */
+function readInstalledCache(ctx: vscode.ExtensionContext): Set<string> {
+  const stored = ctx.globalState.get<string[]>(INSTALLED_CACHE_KEY);
+  if (stored) return new Set(stored);
+  // One-time migration from the old (misleading) setting, then stop using it.
   return new Set(
     vscode.workspace
       .getConfiguration(CONFIG_SECTION)
-      .get<string[]>(INSTALLED_CACHE_KEY, [])
+      .get<string[]>(LEGACY_INSTALLED_SETTING, [])
   );
 }
 
-/** Persist the installed command set back to Global settings. */
-async function writeInstalledCache(commands: string[]): Promise<void> {
-  const cfg = vscode.workspace.getConfiguration(CONFIG_SECTION);
-  await cfg.update(
-    INSTALLED_CACHE_KEY,
-    [...new Set(commands)],
-    vscode.ConfigurationTarget.Global
-  );
+/** Persist the installed command set to globalState (never back to Settings). */
+async function writeInstalledCache(
+  ctx: vscode.ExtensionContext,
+  commands: string[]
+): Promise<void> {
+  await ctx.globalState.update(INSTALLED_CACHE_KEY, [...new Set(commands)]);
 }
 
 /** Cross-instance mutex: only the first VS Code window within the TTL may
@@ -158,22 +156,36 @@ function acquireFirstInstanceLock(ctx: vscode.ExtensionContext): boolean {
  *  installed set. */
 async function refreshInstalledCache(
   ctx: vscode.ExtensionContext,
-  agents: AgentDef[]
+  agents: AgentDef[],
+  force = false
 ): Promise<Set<string>> {
-  const cached = readInstalledCache();
-  if (!acquireFirstInstanceLock(ctx)) {
+  const cached = readInstalledCache(ctx);
+  // A forced refresh (after a catalog hot-update) must not be suppressed by the
+  // cross-instance lock: the hot-update may have introduced newly-installed
+  // agents that the persisted cache doesn't know about yet.
+  if (!force && !acquireFirstInstanceLock(ctx)) {
     return cached; // another window already owns the refresh this session
   }
 
+  // On a forced refresh, resolve the catalog live so agents just introduced by
+  // a hot-update (which may still be in flight) are included in the scan.
+  const catalog = force ? resolveAgents() : agents;
   // Probe the FULL agent list, not just commands not yet known-installed. If we
   // only ever added to the cache, an agent uninstalled between runs would stay
   // listed as installed (and a later launch would fail with "not recognized").
   // Re-probing everything keeps the cache honest; PATH resolution of ~tens of
   // agents is cheap and only the first window pays for it per session.
-  const installed = await detectInstalled(agents);
+  const installed = await detectInstalled(catalog);
   const next = installed.map((a) => a.command);
-  await writeInstalledCache(next);
+  await writeInstalledCache(ctx, next);
   return new Set(next);
+}
+
+/** Re-register terminal profiles from a freshly computed installed set. */
+function applyInstalledSet(ctx: vscode.ExtensionContext, next: Set<string>): void {
+  currentInstalledSet = next;
+  const updated = resolveAgents().filter((a) => next.has(a.command));
+  registerInstalledTerminalProfiles(ctx, updated);
 }
 
 async function pickAndLaunch(ctx: vscode.ExtensionContext) {
@@ -186,13 +198,10 @@ async function pickAndLaunch(ctx: vscode.ExtensionContext) {
   type SettingsItem = { label: string; description: string; iconPath: vscode.ThemeIcon; openSettings: true };
   type ManageItem = { label: string; description: string; iconPath: vscode.ThemeIcon; openManager: true };
   const agents = resolveAgents();
-  // Render instantly from the installed set computed at activation (and kept
-  // current on config changes). Fall back to a live probe only when it is empty
-  // (e.g. first-ever run before the background refresh has finished).
-  const installed =
-    currentInstalledSet.size > 0
-      ? agents.filter((a) => currentInstalledSet.has(a.command))
-      : await detectInstalled(agents);
+  // Render from the cached installed set (refreshed once whenever the agent
+  // config changes — see the onDidChangeConfiguration handler). No live probe
+  // here: opening the picker must stay instant.
+  const installed = agents.filter((a) => currentInstalledSet.has(a.command));
   let items: (AgentItem | SettingsItem | ManageItem)[] = installed.map((agent) => ({
     label: agent.displayName,
     iconPath: agentIcon(ctx, agent),
@@ -250,7 +259,7 @@ async function pickAndLaunch(ctx: vscode.ExtensionContext) {
     if ("openSettings" in picked) {
       void vscode.commands.executeCommand(
         "workbench.action.openSettings",
-        `@ext:${EXTENSION_FULL_ID}`
+        `@ext:${ctx.extension.id}`
       );
       qp.dispose();
       return;
@@ -258,7 +267,7 @@ async function pickAndLaunch(ctx: vscode.ExtensionContext) {
 
     // Manage Agents item: open the Agent Manager webview page.
     if ("openManager" in picked) {
-      AgentManagerPanel.show(ctx.extensionUri);
+      AgentManagerPanel.show(ctx);
       qp.dispose();
       return;
     }
@@ -284,8 +293,11 @@ async function pickAndLaunch(ctx: vscode.ExtensionContext) {
 }
 
 export async function activate(ctx: vscode.ExtensionContext) {
-  // Load the built-in agent catalog from agents.json once (program/data separation).
+  // Load the built-in agent catalog from agents.json once (program/data separation),
+  // then overlay the last-good hot-update cache so the previous catalog shows
+  // instantly before the network refresh completes.
   initBuiltInAgents(ctx);
+  loadCachedBuiltIns(ctx);
 
   // "AI Agents" command -> QuickPick of detected agents.
   ctx.subscriptions.push(
@@ -318,7 +330,7 @@ export async function activate(ctx: vscode.ExtensionContext) {
   // renders instantly without waiting on a (possibly slow) PATH probe. The probe
   // runs in the background below and updates currentInstalledSet + terminal
   // profiles once it lands.
-  const cachedSet = readInstalledCache();
+  const cachedSet = readInstalledCache(ctx);
   currentInstalledSet = new Set(cachedSet);
   const installedCount = cachedSet.size;
   const detectedCommands = [...cachedSet];
@@ -328,13 +340,18 @@ export async function activate(ctx: vscode.ExtensionContext) {
   const installedAgents = agents.filter((a) => cachedSet.has(a.command));
   registerInstalledTerminalProfiles(ctx, installedAgents);
 
-  // Background refresh: only the first instance within the lock TTL scans PATH
-  // and writes the cache; the result is pushed into currentInstalledSet and the
-  // terminal profiles are re-registered when it finishes. Non-blocking.
-  void refreshInstalledCache(ctx, agents).then((next) => {
-    currentInstalledSet = next;
-    const nextAgents = agents.filter((a) => next.has(a.command));
-    registerInstalledTerminalProfiles(ctx, nextAgents);
+  // Startup sequence — order matters:
+  //   1. seed the installed set from the persisted cache (above) for instant UI
+  //   2. fetch/merge the remote catalog (refreshOnStartup)
+  //   3. ONLY THEN re-scan PATH and write the installed cache, using the final
+  //      merged catalog. Scanning before the catalog settles filters against a
+  //      stale agent set and makes the Quick Pick list inconsistent.
+  // The forced scan bypasses the cross-instance lock so a stale cache is corrected.
+  void refreshOnStartup(ctx, () => {
+    void refreshInstalledCache(ctx, resolveAgents(), /* force */ true).then((next) => {
+      applyInstalledSet(ctx, next);
+      AgentManagerPanel.refreshIfOpen();
+    });
   });
 
   // Reliable, always-visible launcher: a status-bar button.
@@ -437,15 +454,16 @@ export async function activate(ctx: vscode.ExtensionContext) {
         refresh();
         warnAgentConfig();
       }
-      // Newly added agents: re-check command availability and refresh the
-      // installed cache; existing cache entries are reused. Re-register the
-      // Terminal menu profiles so the list matches what's now installed.
+      // Agents edited in Settings (custom tools added/removed or a built-in
+      // overridden): force a fresh PATH scan — the cross-instance lock must not
+      // skip it, or a newly added custom tool would never enter the installed
+      // set and the dropdown would stay stale. Then rebuild the dropdown so the
+      // add/remove is reflected immediately, and refresh the manager page.
       if (e.affectsConfiguration(`${CONFIG_SECTION}.agents`)) {
         void warnAgentAvailability();
-        void refreshInstalledCache(ctx, resolveAgents()).then((next) => {
-          currentInstalledSet = next;
-          const nextAgents = resolveAgents().filter((a) => next.has(a.command));
-          registerInstalledTerminalProfiles(ctx, nextAgents);
+        void refreshInstalledCache(ctx, resolveAgents(), /* force */ true).then((next) => {
+          applyInstalledSet(ctx, next);
+          AgentManagerPanel.refreshIfOpen();
         });
       }
     })

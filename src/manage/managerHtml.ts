@@ -26,6 +26,8 @@ export function renderManagerHtml(cspSource: string, scriptUri: vscode.Uri): str
     .card { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border: 1px solid var(--vscode-panel-border, #333); border-radius: 6px; background: var(--vscode-editorWidget-background, rgba(40,40,40,0.6)); }
     .card .head { display: flex; align-items: flex-start; gap: 10px; }
     .card .logo { width: 26px; height: 26px; flex: 0 0 auto; object-fit: contain; border-radius: 5px; }
+    /* codex/pi ship a black-on-transparent PNG; invert it in dark themes so the glyph stays visible. */
+    body.vscode-dark img.logo[src*="codex.png"], body.vscode-dark img.logo[src*="pi.png"] { filter: invert(1); }
     .card .logo.fallback { display: inline-flex; align-items: center; justify-content: center; font-size: 18px; opacity: 0.7; }
     .card .names { flex: 1 1 auto; min-width: 0; }
     .card .name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
