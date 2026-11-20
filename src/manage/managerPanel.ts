@@ -80,11 +80,11 @@ export class AgentManagerPanel {
       AgentManagerPanel.current = undefined;
     });
 
-    // Agent catalog edits (yolo.agents setting) rebuild the grid; a version re-check follows
+    // Agent catalog edits (aiAgentsTerminal.agents setting) rebuild the grid; a version re-check follows
     // so statuses match the new list.
     this.disposables.push(
       vscode.workspace.onDidChangeConfiguration((e) => {
-        if (e.affectsConfiguration("yolo.agents")) {
+        if (e.affectsConfiguration("aiAgentsTerminal.agents")) {
           this.sendInit();
           void this.runCheckAll();
         }

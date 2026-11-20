@@ -6,7 +6,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as vscode from "vscode";
-import { AgentConfig, TERMINAL_STATUSES, parseCatalog, setBuiltInAgents } from "./agents";
+import { AgentConfig, TERMINAL_STATUSES, parseCatalog, setBuiltInAgents, getBuiltInAgents } from "./agents";
 import { canExecute } from "./agentDetector";
 
 const CATALOG_URL =
@@ -178,10 +178,10 @@ async function downloadMissingIcons(ctx: vscode.ExtensionContext, agents: AgentC
  * already loaded.
  *
  * `onSettled` ALWAYS runs once when the catalog step is done — whether the
- * fetch returned 200 (applied), 304 (unchanged) or failed. Callers must do the
- * installed-agent scan here so it always runs AFTER the catalog is final;
- * scanning before the catalog settles would filter the list against a stale
- * agent set and leave the Quick Pick inconsistent.
+ * fetch returned 200 (applied), 304 (unchanged) or failed — and after missing
+ * icons are downloaded. Callers must do the installed-agent scan here so it
+ * always runs AFTER the catalog and icons are final; scanning earlier would
+ * filter the list against a stale agent set and leave the UI inconsistent.
  */
 export async function refreshOnStartup(
   ctx: vscode.ExtensionContext,
@@ -234,10 +234,19 @@ export async function refreshOnStartup(
     }
 
     setBuiltInAgents(merged);
-    void downloadMissingIcons(ctx, merged);
   } finally {
+    // Download missing icons for the FINAL in-memory catalog on every path
+    // (200 applied / 304 unchanged / failed): a previous download may have failed
+    // and a later 304 would otherwise never retry. Await it so onSettled (which
+    // rebuilds the dropdown/panel) fires only after icons are on disk — otherwise
+    // a new agent shows the default icon and never refreshes until a manual reload.
+    try {
+      await downloadMissingIcons(ctx, getBuiltInAgents());
+    } catch {
+      // Icon download never blocks the UI refresh.
+    }
     // Always signal completion so the caller can run the installed-agent scan
-    // after the catalog is final (see the onSettled doc above).
+    // after the catalog and its icons are final (see the onSettled doc above).
     onSettled?.();
   }
 }
