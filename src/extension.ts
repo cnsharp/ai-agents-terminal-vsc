@@ -88,7 +88,7 @@ function registerInstalledTerminalProfiles(ctx: vscode.ExtensionContext, install
         // Remember this agent so the status-bar Quick Pick pre-selects it next time.
         void ctx.globalState.update(LAST_AGENT_KEY, agent.command);
         return new vscode.TerminalProfile({
-          name: `AI: ${agent.displayName}`,
+          name: agent.displayName,
           shellPath: findExecutablePath(agent.command) ?? agent.command,
           shellArgs,
           env: { PATH: boostedPath() },
@@ -280,7 +280,7 @@ async function pickAndLaunch(ctx: vscode.ExtensionContext) {
 
     vscode.window
       .createTerminal({
-        name: `AI: ${picked.agent.displayName}`,
+        name: picked.agent.displayName,
         shellPath: findExecutablePath(picked.agent.command) ?? picked.agent.command,
         shellArgs,
         env: { PATH: boostedPath() },
